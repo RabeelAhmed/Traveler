@@ -1,4 +1,3 @@
-
 const story = require("../Models/story");
 const user = require("../Models/User");
 const mongoose = require("mongoose");
@@ -90,6 +89,77 @@ const addStory = async (req, res) => {
         post: newStory._id,
       });
 
+      // Save changes in parallel
+      await Promise.all([
+        author.save(),
+        notification.save()
+      ]);
+
+      // Notify user
+      notify(notification);
+    }
+
+    // Add story to user's stories
+    author.stories.push(newStory._id);
+    await author.save();
+
+    // Prepare response
+    const mappedStory = mapStoryOutput(newStory, author);
+    
+    return res.status(201).json({
+      success: true,
+      message: "Story has been uploaded successfully",
+      data: {
+        story: mappedStory
+      }
+    });
+
+  } catch (err) {
+    console.error("Error in addStory:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
+  }
+};
+
+const generateSignature = (req, res) => {
+  try {
+    const timestamp = Math.round(Date.now() / 1000);
+    const params = {
+      timestamp,
+      folder: "Story_Media",
+    };
+
+    const signature = cloudinary.utils.api_sign_request(
+      params,
+      process.env.CLOUDINARY_API_SECRET
+    );
+
+    if (!signature) {
+      throw new Error("Failed to generate signature");
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        signature,
+        timestamp,
+        cloudName: process.env.CLOUD_NAME,
+        apiKey: process.env.API_KEY,
+      }
+    });
+
+  } catch (err) {
+    console.error("Error in generateSignature:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to generate Cloudinary signature",
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
+  }
+};
 const getStory = async(req,res) => {
   const allStory = await story.find().populate('userId', 'profilePicture');
   const curUserId = req.user?.userId;
@@ -124,7 +194,35 @@ const likeAndUnlikeStory = async (req, res) => {
     if (!curStory.likes) {
       return res.status(500).json({ success: false, message: "Likes field is missing in the story document" });
     }
-module.exports = {
-  addStory,
-  getStories,
+
+    // Check if user already liked the story
+    const isLiked = curStory.likes.includes(curUserId);
+
+    if (isLiked) {
+      curStory.likes.pull(curUserId);
+    } else {
+      curStory.likes.push(curUserId);
+    }
+
+    await curStory.save(); // Save updated likes
+
+    return res.status(200).json({
+      success: true,
+      message: isLiked ? "Story unliked successfully" : "Story liked successfully",
+      story: mapStoryOutput(curStory,curUserId) // Include total likes count
+    });
+
+  } catch (error) {
+    console.error("Error in likeAndUnlikeStory:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong, please try again later",
+      error: error.message, // Include detailed error message
+    });
+  }
 };
+
+
+
+
+module.exports = { addStory,generateSignature,getStory,likeAndUnlikeStory };

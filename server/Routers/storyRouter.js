@@ -1,8 +1,10 @@
 const router = require('express').Router()
-const {addStory, getStories} = require('../Controllers/storyController')
+const {addStory,generateSignature,getStory,likeAndUnlikeStory} = require('../Controllers/storyController')
 const {verifyAuthToken} = require('../Middleware/jwtAuthMiddleware')
-const { singleUpload } = require('../Middleware/uploads');
+const { storyUpload } = require('../Middleware/uploads');
 
-router.post('/addstory',verifyAuthToken,singleUpload,addStory);
-router.get('/getstories',verifyAuthToken,getStories);
+router.post('/addstory',verifyAuthToken,addStory);
+router.get('/generate-signature',generateSignature),
+router.get('/getstory',verifyAuthToken,getStory);
+router.post('/like',verifyAuthToken,likeAndUnlikeStory);
 module.exports = router;
