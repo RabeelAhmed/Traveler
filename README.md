@@ -1,4 +1,4 @@
-<![CDATA[<div align="center">
+<div align="center">
 
 # 🌍 Traveler
 
@@ -70,7 +70,8 @@ Most social platforms treat travel as a secondary activity. Traveler was built f
 
 ## 🛠 Tech Stack
 
-### Frontend (`clinet/`)
+### Frontend — `clinet/`
+
 | Technology | Purpose |
 |-----------|---------|
 | React 18 + Vite | UI framework and build tool |
@@ -82,7 +83,8 @@ Most social platforms treat travel as a secondary activity. Traveler was built f
 | Socket.io Client | Real-time event listening |
 | React Hot Toast | Toast notification system |
 
-### Backend (`server/`)
+### Backend — `server/`
+
 | Technology | Purpose |
 |-----------|---------|
 | Node.js + Express | REST API server |
@@ -96,7 +98,8 @@ Most social platforms treat travel as a secondary activity. Traveler was built f
 | node-cron | Scheduled jobs (badges, cleanup) |
 | Multer | Multipart file parsing middleware |
 
-### AI Recommendation Engine (`agent/`)
+### AI Recommendation Engine — `agent/`
+
 | Technology | Purpose |
 |-----------|---------|
 | Node.js + Express | Lightweight microservice |
@@ -109,45 +112,40 @@ Most social platforms treat travel as a secondary activity. Traveler was built f
 ## 🏗 Architecture Overview
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                      CLIENT (React)                      │
-│  Redux Store ─► Pages ─► Components ─► Axios / Socket  │
-└──────────────────────┬──────────────────────────────────┘
-                       │ HTTP + WebSocket
-        ┌──────────────┴──────────────┐
-        │                             │
-┌───────▼──────────┐       ┌──────────▼──────────┐
-│  Express Server  │       │   AI Agent (Node)   │
-│  :5000           │       │   :5001             │
-│  ─────────────── │       │  ─────────────────  │
-│  /auth           │       │  GET /recommend     │
-│  /post           │       │  GET /recommend/geo │
-│  /story          │       │                     │
-│  /user           │       │  CSV: 69 Pakistan   │
-│  /journey        │       │  tourist sites      │
-│  socket.io       │       └─────────────────────┘
-└───────┬──────────┘
-        │
-┌───────▼──────────┐
+┌──────────────────────────────────────────────────────────┐
+│                      CLIENT (React)                       │
+│   Redux Store ─► Pages ─► Components ─► Axios / Socket  │
+└───────────────────────┬──────────────────────────────────┘
+                        │ HTTP + WebSocket
+         ┌──────────────┴──────────────┐
+         │                             │
+┌────────▼─────────┐        ┌──────────▼──────────┐
+│  Express Server  │        │   AI Agent (Node)   │
+│  :5000           │        │   :5001             │
+│ ───────────────  │        │ ─────────────────── │
+│  /auth           │        │  GET /recommend     │
+│  /post           │        │  GET /recommend/geo │
+│  /story          │        │                     │
+│  /user           │        │  CSV: 69 Pakistan   │
+│  /journey        │        │  tourist sites      │
+│  socket.io       │        └─────────────────────┘
+└────────┬─────────┘
+         │
+┌────────▼─────────┐
 │    MongoDB       │
-│  ─────────────── │
+│ ───────────────  │
 │  users           │
 │  posts           │
 │  stories         │
 │  journeys        │
 │  notifications   │
-└──────────────────┘
-        │
-┌───────▼──────────┐
+└────────┬─────────┘
+         │
+┌────────▼─────────┐
 │   Cloudinary     │
 │  (media assets)  │
 └──────────────────┘
 ```
-
-The system is a **three-process monorepo**:
-1. **React Client** — Vite SPA on port `5173`, communicates with the backend via REST and Socket.io.
-2. **Express Server** — REST API on port `5000`, handles auth, posts, stories, journeys, users, and real-time events.
-3. **AI Agent** — Lightweight Express microservice on port `5001`, serves destination recommendations from a CSV dataset without any external API dependency.
 
 ---
 
@@ -155,11 +153,9 @@ The system is a **three-process monorepo**:
 
 ```
 traveler/
-│
-├── clinet/                         # React + Vite frontend
-│   ├── public/
+├── clinet/                          # React + Vite frontend
 │   ├── src/
-│   │   ├── Components/             # Reusable UI components
+│   │   ├── Components/              # Reusable UI components
 │   │   │   ├── Navbar.jsx
 │   │   │   ├── Sidebar.jsx
 │   │   │   ├── PostCard.jsx
@@ -167,7 +163,7 @@ traveler/
 │   │   │   ├── JourneyCard.jsx
 │   │   │   ├── Notification.jsx
 │   │   │   └── ...
-│   │   ├── Pages/                  # Route-level page components
+│   │   ├── Pages/                   # Route-level page components
 │   │   │   ├── Landing.jsx
 │   │   │   ├── Home.jsx
 │   │   │   ├── Forum.jsx
@@ -180,7 +176,7 @@ traveler/
 │   │   │       ├── Login.jsx
 │   │   │       ├── Signup.jsx
 │   │   │       └── steps/
-│   │   ├── Toolkit/                # Redux Toolkit store
+│   │   ├── Toolkit/                 # Redux Toolkit store
 │   │   │   ├── store.js
 │   │   │   └── slices/
 │   │   │       ├── appConfigSlice.js
@@ -195,7 +191,7 @@ traveler/
 │   ├── .env.example
 │   └── package.json
 │
-├── server/                         # Node.js + Express backend
+├── server/                          # Node.js + Express backend
 │   ├── Controllers/
 │   │   ├── authenticationController.js
 │   │   ├── postController.js
@@ -227,14 +223,14 @@ traveler/
 │   ├── .env.example
 │   └── package.json
 │
-├── agent/                          # AI Recommendation microservice
-│   ├── Tourist Destinations.csv    # 69 destinations dataset
-│   ├── server.js                   # Express API + KNN logic
+├── agent/                           # AI Recommendation microservice
+│   ├── Tourist Destinations.csv     # 69 destinations dataset
+│   ├── server.js                    # Express API + KNN logic
 │   ├── .env.example
 │   └── package.json
 │
 ├── docs/
-│   └── screenshots/                # Application screenshots
+│   └── screenshots/                 # Application screenshots
 │
 ├── .gitignore
 ├── LICENSE
@@ -360,24 +356,27 @@ cp agent/.env.example agent/.env
 Start all three services in separate terminal windows:
 
 **1. Backend Server**
+
 ```bash
 cd server
 node index.js
-# Listening on http://localhost:5000
+# → Listening on http://localhost:5000
 ```
 
 **2. AI Recommendation Engine**
+
 ```bash
 cd agent
 node server.js
-# Listening on http://localhost:5001
+# → Listening on http://localhost:5001
 ```
 
 **3. React Client**
+
 ```bash
 cd clinet
 npm run dev
-# Listening on http://localhost:5173
+# → Listening on http://localhost:5173
 ```
 
 Open `http://localhost:5173` in your browser.
@@ -386,15 +385,15 @@ Open `http://localhost:5173` in your browser.
 
 ## 📡 API Overview
 
-All backend routes are prefixed as shown. Protected routes require a JWT bearer token in the `Authorization` header.
+Protected routes require a JWT token in the `Authorization: Bearer <token>` header.
 
 ### Auth — `/auth`
 
 | Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
+|--------|----------|:----:|-------------|
 | `POST` | `/auth/signup` | ❌ | Register a new user |
 | `POST` | `/auth/login` | ❌ | Authenticate and receive JWT |
-| `GET` | `/auth/profile` | ✅ | Get the logged-in user's profile & posts |
+| `GET` | `/auth/profile` | ✅ | Get logged-in user's profile and posts |
 | `POST` | `/auth/updateprofile` | ✅ | Update profile details and picture |
 | `POST` | `/auth/forget-pasword` | ❌ | Send password reset email |
 | `POST` | `/auth/reset-password` | ❌ | Reset password via token |
@@ -403,29 +402,29 @@ All backend routes are prefixed as shown. Protected routes require a JWT bearer 
 ### Posts — `/post`
 
 | Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
+|--------|----------|:----:|-------------|
 | `POST` | `/post/createpost` | ✅ | Create a new travel post |
 | `GET` | `/post/:_id` | Optional | Get a single post by ID |
 | `POST` | `/post/likepost` | ✅ | Toggle like on a post |
 | `POST` | `/post/addcomment` | ✅ | Add a comment to a post |
 | `POST` | `/post/deletecomment` | ✅ | Delete a comment |
 | `POST` | `/post/deletepost` | ✅ | Delete a post |
-| `GET` | `/post/search` | ✅ | Search posts and users by keyword or hashtag |
+| `GET` | `/post/search` | ✅ | Search posts and users |
 | `GET` | `/post/signature` | ✅ | Get Cloudinary multi-upload signature |
 
 ### Stories — `/story`
 
 | Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
+|--------|----------|:----:|-------------|
 | `POST` | `/story/addstory` | ✅ | Upload a geo-tagged story |
-| `GET` | `/story/getstory` | ✅ | Fetch all active stories (TTL-based, expires in 24h) |
+| `GET` | `/story/getstory` | ✅ | Fetch all active stories (expires in 24h) |
 | `POST` | `/story/like` | ✅ | Toggle like on a story |
 | `GET` | `/story/generate-signature` | ❌ | Get Cloudinary story upload signature |
 
 ### Users — `/user`
 
 | Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
+|--------|----------|:----:|-------------|
 | `POST` | `/user/follow` | ✅ | Follow or unfollow a user |
 | `GET` | `/user/feed` | ✅ | Get personalised feed from followed users |
 | `GET` | `/user/getuserprofile/:_id` | ✅ | Get a user's public profile |
@@ -434,7 +433,7 @@ All backend routes are prefixed as shown. Protected routes require a JWT bearer 
 ### Journeys — `/journey`
 
 | Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
+|--------|----------|:----:|-------------|
 | `POST` | `/journey/start` | ✅ | Initialise a new journey |
 | `POST` | `/journey/:id/addstep` | ✅ | Add a travel stop to a journey |
 | `POST` | `/journey/:id/end` | ✅ | Mark a journey as complete |
@@ -443,9 +442,9 @@ All backend routes are prefixed as shown. Protected routes require a JWT bearer 
 ### AI Agent — `http://localhost:5001`
 
 | Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `GET` | `/recommend` | ❌ | Recommend destinations by `?district=` and/or `?category=` |
-| `GET` | `/recommend/geo` | ❌ | Find the nearest destination to `?lat=&lon=` coordinates |
+|--------|----------|:----:|-------------|
+| `GET` | `/recommend` | ❌ | Recommend by `?district=` and/or `?category=` |
+| `GET` | `/recommend/geo` | ❌ | Nearest destination to `?lat=&lon=` |
 
 ---
 
@@ -453,33 +452,33 @@ All backend routes are prefixed as shown. Protected routes require a JWT bearer 
 
 ### User
 ```
-username, fullname, email, password (bcrypt), profilePicture {url, publicId},
+username, fullname, email, password (bcrypt), profilePicture { url, publicId },
 bio, koFiUrl, dateOfBirth, posts[], stories[], followers[], following[],
-badges[{name, awardedAt}], verified, resetPasswordToken, resetPasswordExpires
+badges[{ name, awardedAt }], verified, resetPasswordToken, resetPasswordExpires
 ```
 
 ### Post
 ```
 userId (ref: User), title, description, location, hashtags[], postingDate,
-rating (1–5), media[{url, publicId}], tags[], likes[], journeyId (ref: Journey),
-stepIndex, comments[{userId, commentText, commentedAt}]
+rating (1–5), media[{ url, publicId }], tags[], likes[], journeyId (ref: Journey),
+stepIndex, comments[{ userId, commentText, commentedAt }]
 ```
 
 ### Story
 ```
-userId (ref: User), mediaUrl, publicId, location {type: Point, coordinates[]},
-likes[], createdAt (TTL index: expires after 24 hours)
+userId (ref: User), mediaUrl, publicId, location { type: Point, coordinates[] },
+likes[], createdAt (TTL index — expires after 24 hours)
 ```
 
 ### Journey
 ```
-userId (ref: User), title, description, steps[{postId, stepIndex, addedAt}],
+userId (ref: User), title, description, steps[{ postId, stepIndex, addedAt }],
 startDate, endDate, isCompleted, createdAt
 ```
 
 ### Notification
 ```
-userId (ref: User), type (like|comment|follow), fromUser (ref: User),
+userId (ref: User), type (like | comment | follow), fromUser (ref: User),
 postId (ref: Post), isRead, createdAt
 ```
 
@@ -487,13 +486,13 @@ postId (ref: Post), isRead, createdAt
 
 ## 🔮 Future Improvements
 
-- [ ] **AI Model Upgrade** — Replace the CSV-based filtering engine with a trained Python ML model (cosine similarity / collaborative filtering).
-- [ ] **Direct Messaging** — Private real-time chat between users via Socket.io rooms.
-- [ ] **Progressive Web App** — Add a service worker and manifest for offline support.
-- [ ] **Post Bookmarks** — Save posts to personal reading lists.
-- [ ] **Multi-language Support** — i18n with React Intl.
-- [ ] **Analytics Dashboard** — Post reach, engagement rates, and follower growth charts.
-- [ ] **Verified Accounts** — Email verification flow after registration.
+- [ ] **AI Model Upgrade** — Replace CSV filtering with a trained ML model (cosine similarity / collaborative filtering)
+- [ ] **Direct Messaging** — Private real-time chat via Socket.io rooms
+- [ ] **Progressive Web App** — Service worker and manifest for offline support
+- [ ] **Post Bookmarks** — Save posts to personal reading lists
+- [ ] **Multi-language Support** — i18n with React Intl
+- [ ] **Analytics Dashboard** — Post reach, engagement rates, and follower growth charts
+- [ ] **Email Verification** — Verify email address after registration
 
 ---
 
@@ -517,4 +516,3 @@ This project is licensed under the **MIT License** — see the [LICENSE](./LICEN
 ⭐ If you found this project useful, please consider giving it a star!
 
 </div>
-]]>
