@@ -3,6 +3,7 @@ const dbconnection = require('./db');
 const authentication = require('./Routers/authenticationRouters');
 const postRouter = require('./Routers/postRouter');
 const story = require('./Routers/storyRouter');
+const journeyRouter = require('./Routers/journeyRouter');
 const morgan = require('morgan');
 const cors = require('cors');
 
@@ -23,6 +24,7 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use('/auth', authentication)
 app.use('/post', postRouter)
 app.use('/story', story)
+app.use('/journey', journeyRouter)
 
 app.get('/', (req, res) => {
   res.send('Hello World!')
