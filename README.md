@@ -1,3 +1,520 @@
-# Traveler
+<![CDATA[<div align="center">
 
-A social platform for travelers.
+# 🌍 Traveler
+
+### A Full-Stack Social Platform for Travel Enthusiasts
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+[![Node.js](https://img.shields.io/badge/Node.js-18%2B-green.svg)](https://nodejs.org)
+[![React](https://img.shields.io/badge/React-18-blue.svg)](https://react.dev)
+[![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-brightgreen.svg)](https://mongodb.com)
+[![Socket.io](https://img.shields.io/badge/Socket.io-4.x-black.svg)](https://socket.io)
+
+**Traveler** is a MERN stack social network designed for explorers. Share travel posts, upload geo-tagged stories on an interactive map, log multi-step journey trees, and receive AI-powered destination recommendations — all in one platform.
+
+![Landing Page](docs/screenshots/landing.png)
+
+</div>
+
+---
+
+## 📖 Table of Contents
+
+- [Why Traveler?](#-why-traveler)
+- [Features](#-features)
+- [Tech Stack](#-tech-stack)
+- [Architecture Overview](#-architecture-overview)
+- [Folder Structure](#-folder-structure)
+- [Screenshots](#-screenshots)
+- [Installation](#-installation)
+- [Environment Variables](#-environment-variables)
+- [Running the Application](#-running-the-application)
+- [API Overview](#-api-overview)
+- [Database Models](#-database-models)
+- [Future Improvements](#-future-improvements)
+- [License](#-license)
+- [Author](#-author)
+
+---
+
+## 💡 Why Traveler?
+
+Most social platforms treat travel as a secondary activity. Traveler was built from the ground up with the traveller's workflow in mind:
+
+- **Geo-tagged stories** let you pin memories directly on an interactive world map.
+- **Journey Trees** let you document multi-stop trips as a structured, shareable timeline.
+- **An AI Recommendation Engine** serves personalised destination suggestions based on district and category filters.
+- **Real-time notifications** via Socket.io keep you updated on likes, comments, and follows the moment they happen.
+- **Achievement Badges** and reward systems encourage you to keep exploring and posting.
+
+---
+
+## ✨ Features
+
+| Feature | Description |
+|---------|-------------|
+| 🔐 **Authentication** | JWT-based register/login, forgot password with email reset via Resend |
+| 📸 **Travel Posts** | Create rich posts with multi-image upload, hashtags, location, star rating, and user tagging |
+| 🗺️ **Story Map** | Upload geo-tagged 24-hour stories displayed as pins on an interactive Leaflet map |
+| 🌲 **Journey Tree** | Log multi-step journeys with ordered stops; visualise the full trip as a node tree |
+| 🤖 **Travel Advisor** | Query a built-in recommendation engine by province and category — returns destinations with map pins |
+| 👥 **Social Feed** | Follow users, like and comment on posts, and get a personalised home feed |
+| 🔔 **Real-time Alerts** | Socket.io-powered push notifications for social interactions |
+| 🔍 **Search** | Search posts and users across the platform |
+| 🏅 **Achievements** | Earn badges based on posting milestones via automated cron jobs |
+| ☁️ **Cloud Media** | Cloudinary integration for optimised image and video hosting |
+| 📱 **Responsive UI** | Mobile-first design with a bottom tab bar for small screens |
+| 🌤️ **Weather Widget** | Live weather data on the home screen powered by OpenWeatherMap |
+
+---
+
+## 🛠 Tech Stack
+
+### Frontend (`clinet/`)
+| Technology | Purpose |
+|-----------|---------|
+| React 18 + Vite | UI framework and build tool |
+| Redux Toolkit | Global state management |
+| React Router v6 | Client-side routing |
+| Framer Motion | Page transitions and micro-animations |
+| Leaflet / React-Leaflet | Interactive maps |
+| Axios | HTTP client |
+| Socket.io Client | Real-time event listening |
+| React Hot Toast | Toast notification system |
+
+### Backend (`server/`)
+| Technology | Purpose |
+|-----------|---------|
+| Node.js + Express | REST API server |
+| MongoDB + Mongoose | Document database |
+| Socket.io | Real-time bidirectional communication |
+| JSON Web Token (JWT) | Stateless authentication |
+| bcrypt | Password hashing |
+| Cloudinary | Cloud media storage |
+| Resend | Transactional email delivery |
+| Morgan | HTTP request logging |
+| node-cron | Scheduled jobs (badges, cleanup) |
+| Multer | Multipart file parsing middleware |
+
+### AI Recommendation Engine (`agent/`)
+| Technology | Purpose |
+|-----------|---------|
+| Node.js + Express | Lightweight microservice |
+| CSV-based dataset | 69 tourist destinations across Pakistan |
+| KNN / Euclidean Distance | Geo-proximity recommendation |
+| Category + district filtering | Preference-based recommendations |
+
+---
+
+## 🏗 Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                      CLIENT (React)                      │
+│  Redux Store ─► Pages ─► Components ─► Axios / Socket  │
+└──────────────────────┬──────────────────────────────────┘
+                       │ HTTP + WebSocket
+        ┌──────────────┴──────────────┐
+        │                             │
+┌───────▼──────────┐       ┌──────────▼──────────┐
+│  Express Server  │       │   AI Agent (Node)   │
+│  :5000           │       │   :5001             │
+│  ─────────────── │       │  ─────────────────  │
+│  /auth           │       │  GET /recommend     │
+│  /post           │       │  GET /recommend/geo │
+│  /story          │       │                     │
+│  /user           │       │  CSV: 69 Pakistan   │
+│  /journey        │       │  tourist sites      │
+│  socket.io       │       └─────────────────────┘
+└───────┬──────────┘
+        │
+┌───────▼──────────┐
+│    MongoDB       │
+│  ─────────────── │
+│  users           │
+│  posts           │
+│  stories         │
+│  journeys        │
+│  notifications   │
+└──────────────────┘
+        │
+┌───────▼──────────┐
+│   Cloudinary     │
+│  (media assets)  │
+└──────────────────┘
+```
+
+The system is a **three-process monorepo**:
+1. **React Client** — Vite SPA on port `5173`, communicates with the backend via REST and Socket.io.
+2. **Express Server** — REST API on port `5000`, handles auth, posts, stories, journeys, users, and real-time events.
+3. **AI Agent** — Lightweight Express microservice on port `5001`, serves destination recommendations from a CSV dataset without any external API dependency.
+
+---
+
+## 📁 Folder Structure
+
+```
+traveler/
+│
+├── clinet/                         # React + Vite frontend
+│   ├── public/
+│   ├── src/
+│   │   ├── Components/             # Reusable UI components
+│   │   │   ├── Navbar.jsx
+│   │   │   ├── Sidebar.jsx
+│   │   │   ├── PostCard.jsx
+│   │   │   ├── UploadStory.jsx
+│   │   │   ├── JourneyCard.jsx
+│   │   │   ├── Notification.jsx
+│   │   │   └── ...
+│   │   ├── Pages/                  # Route-level page components
+│   │   │   ├── Landing.jsx
+│   │   │   ├── Home.jsx
+│   │   │   ├── Forum.jsx
+│   │   │   ├── Story.jsx
+│   │   │   ├── TravelAdvisor.jsx
+│   │   │   ├── JourneyTreeView.jsx
+│   │   │   ├── Profile.jsx
+│   │   │   ├── CreatePost.jsx
+│   │   │   └── Authentication/
+│   │   │       ├── Login.jsx
+│   │   │       ├── Signup.jsx
+│   │   │       └── steps/
+│   │   ├── Toolkit/                # Redux Toolkit store
+│   │   │   ├── store.js
+│   │   │   └── slices/
+│   │   │       ├── appConfigSlice.js
+│   │   │       ├── feedSlice.js
+│   │   │       ├── storySlice.js
+│   │   │       ├── journeySlice.js
+│   │   │       └── userProfileSlice.js
+│   │   ├── utils/
+│   │   │   ├── axiosClient.js
+│   │   │   └── motion.js
+│   │   └── App.jsx
+│   ├── .env.example
+│   └── package.json
+│
+├── server/                         # Node.js + Express backend
+│   ├── Controllers/
+│   │   ├── authenticationController.js
+│   │   ├── postController.js
+│   │   ├── storyController.js
+│   │   ├── userController.js
+│   │   └── journeyController.js
+│   ├── Models/
+│   │   ├── User.js
+│   │   ├── post.js
+│   │   ├── story.js
+│   │   ├── journey.js
+│   │   └── notification.js
+│   ├── Routers/
+│   │   ├── authenticationRouters.js
+│   │   ├── postRouter.js
+│   │   ├── storyRouter.js
+│   │   ├── userRouter.js
+│   │   └── journeyRouter.js
+│   ├── Middleware/
+│   │   ├── jwtAuthMiddleware.js
+│   │   └── uploads.js
+│   ├── Utils/
+│   │   ├── cloudinaryConfig.js
+│   │   ├── responseWrapper.js
+│   │   └── utils.js
+│   ├── db.js
+│   ├── socket.js
+│   ├── index.js
+│   ├── .env.example
+│   └── package.json
+│
+├── agent/                          # AI Recommendation microservice
+│   ├── Tourist Destinations.csv    # 69 destinations dataset
+│   ├── server.js                   # Express API + KNN logic
+│   ├── .env.example
+│   └── package.json
+│
+├── docs/
+│   └── screenshots/                # Application screenshots
+│
+├── .gitignore
+├── LICENSE
+├── CONTRIBUTING.md
+└── README.md
+```
+
+---
+
+## 📸 Screenshots
+
+<table>
+  <tr>
+    <td align="center"><strong>Landing Page</strong></td>
+    <td align="center"><strong>Login</strong></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/landing.png" alt="Landing Page" width="450"/></td>
+    <td><img src="docs/screenshots/login.png" alt="Login" width="450"/></td>
+  </tr>
+  <tr>
+    <td align="center"><strong>Signup</strong></td>
+    <td align="center"><strong>Home Feed</strong></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/signup.png" alt="Signup" width="450"/></td>
+    <td><img src="docs/screenshots/home.png" alt="Home Feed" width="450"/></td>
+  </tr>
+  <tr>
+    <td align="center"><strong>Travel Forum</strong></td>
+    <td align="center"><strong>Story Map</strong></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/forum.png" alt="Forum" width="450"/></td>
+    <td><img src="docs/screenshots/story_viewer.png" alt="Story Map" width="450"/></td>
+  </tr>
+  <tr>
+    <td align="center"><strong>Travel Advisor</strong></td>
+    <td align="center"><strong>Journey Tree</strong></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/travel_advisor.png" alt="Travel Advisor" width="450"/></td>
+    <td><img src="docs/screenshots/journey_tree.png" alt="Journey Tree" width="450"/></td>
+  </tr>
+</table>
+
+---
+
+## 🚀 Installation
+
+### Prerequisites
+
+- [Node.js](https://nodejs.org/) v18 or higher
+- [MongoDB](https://www.mongodb.com/) (local instance or Atlas URI)
+- [Cloudinary](https://cloudinary.com/) account (for media uploads)
+- [Resend](https://resend.com/) account (for email-based password reset)
+- [OpenWeatherMap](https://openweathermap.org/) API key (for weather widget)
+
+### Clone the Repository
+
+```bash
+git clone https://github.com/RabeelAhmed/Traveler.git
+cd Traveler
+```
+
+### Install Dependencies
+
+```bash
+# Install client dependencies
+npm install --prefix clinet
+
+# Install server dependencies
+npm install --prefix server
+
+# Install AI agent dependencies
+npm install --prefix agent
+```
+
+---
+
+## 🔐 Environment Variables
+
+Copy the example files and fill in your credentials:
+
+```bash
+cp server/.env.example server/.env
+cp clinet/.env.example clinet/.env
+cp agent/.env.example agent/.env
+```
+
+### `server/.env`
+
+| Variable | Description |
+|----------|-------------|
+| `PORT` | Port the Express server listens on (default: `5000`) |
+| `ORIGIN` | Frontend URL for CORS (e.g. `http://localhost:5173`) |
+| `MONGO_URI` | MongoDB connection string |
+| `JWT_SECRET` | Secret key for signing JWT tokens |
+| `CLOUDINARY_CLOUD_NAME` | Your Cloudinary cloud name |
+| `CLOUDINARY_API_KEY` | Cloudinary API key |
+| `CLOUDINARY_API_SECRET` | Cloudinary API secret |
+| `RESEND_API_KEY` | Resend API key for transactional emails |
+
+### `clinet/.env`
+
+| Variable | Description |
+|----------|-------------|
+| `VITE_SERVER_BASE_URL` | Express backend URL (e.g. `http://localhost:5000`) |
+| `VITE_TRAVEL_ADVISOR_BASE_URL` | AI agent URL (e.g. `http://localhost:5001`) |
+| `VITE_WEATHER_API_KEY` | OpenWeatherMap API key |
+| `VITE_CLOUDINARY_CLOUD_NAME` | Your Cloudinary cloud name |
+
+### `agent/.env`
+
+| Variable | Description |
+|----------|-------------|
+| `PORT` | Port for the AI microservice (default: `5001`) |
+
+---
+
+## ▶️ Running the Application
+
+Start all three services in separate terminal windows:
+
+**1. Backend Server**
+```bash
+cd server
+node index.js
+# Listening on http://localhost:5000
+```
+
+**2. AI Recommendation Engine**
+```bash
+cd agent
+node server.js
+# Listening on http://localhost:5001
+```
+
+**3. React Client**
+```bash
+cd clinet
+npm run dev
+# Listening on http://localhost:5173
+```
+
+Open `http://localhost:5173` in your browser.
+
+---
+
+## 📡 API Overview
+
+All backend routes are prefixed as shown. Protected routes require a JWT bearer token in the `Authorization` header.
+
+### Auth — `/auth`
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| `POST` | `/auth/signup` | ❌ | Register a new user |
+| `POST` | `/auth/login` | ❌ | Authenticate and receive JWT |
+| `GET` | `/auth/profile` | ✅ | Get the logged-in user's profile & posts |
+| `POST` | `/auth/updateprofile` | ✅ | Update profile details and picture |
+| `POST` | `/auth/forget-pasword` | ❌ | Send password reset email |
+| `POST` | `/auth/reset-password` | ❌ | Reset password via token |
+| `GET` | `/auth/signature` | ❌ | Get Cloudinary upload signature |
+
+### Posts — `/post`
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| `POST` | `/post/createpost` | ✅ | Create a new travel post |
+| `GET` | `/post/:_id` | Optional | Get a single post by ID |
+| `POST` | `/post/likepost` | ✅ | Toggle like on a post |
+| `POST` | `/post/addcomment` | ✅ | Add a comment to a post |
+| `POST` | `/post/deletecomment` | ✅ | Delete a comment |
+| `POST` | `/post/deletepost` | ✅ | Delete a post |
+| `GET` | `/post/search` | ✅ | Search posts and users by keyword or hashtag |
+| `GET` | `/post/signature` | ✅ | Get Cloudinary multi-upload signature |
+
+### Stories — `/story`
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| `POST` | `/story/addstory` | ✅ | Upload a geo-tagged story |
+| `GET` | `/story/getstory` | ✅ | Fetch all active stories (TTL-based, expires in 24h) |
+| `POST` | `/story/like` | ✅ | Toggle like on a story |
+| `GET` | `/story/generate-signature` | ❌ | Get Cloudinary story upload signature |
+
+### Users — `/user`
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| `POST` | `/user/follow` | ✅ | Follow or unfollow a user |
+| `GET` | `/user/feed` | ✅ | Get personalised feed from followed users |
+| `GET` | `/user/getuserprofile/:_id` | ✅ | Get a user's public profile |
+| `GET` | `/user/getnotification` | ✅ | Retrieve social notifications |
+
+### Journeys — `/journey`
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| `POST` | `/journey/start` | ✅ | Initialise a new journey |
+| `POST` | `/journey/:id/addstep` | ✅ | Add a travel stop to a journey |
+| `POST` | `/journey/:id/end` | ✅ | Mark a journey as complete |
+| `GET` | `/journey/:id` | Optional | Retrieve a journey with its step tree |
+
+### AI Agent — `http://localhost:5001`
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| `GET` | `/recommend` | ❌ | Recommend destinations by `?district=` and/or `?category=` |
+| `GET` | `/recommend/geo` | ❌ | Find the nearest destination to `?lat=&lon=` coordinates |
+
+---
+
+## 🗄 Database Models
+
+### User
+```
+username, fullname, email, password (bcrypt), profilePicture {url, publicId},
+bio, koFiUrl, dateOfBirth, posts[], stories[], followers[], following[],
+badges[{name, awardedAt}], verified, resetPasswordToken, resetPasswordExpires
+```
+
+### Post
+```
+userId (ref: User), title, description, location, hashtags[], postingDate,
+rating (1–5), media[{url, publicId}], tags[], likes[], journeyId (ref: Journey),
+stepIndex, comments[{userId, commentText, commentedAt}]
+```
+
+### Story
+```
+userId (ref: User), mediaUrl, publicId, location {type: Point, coordinates[]},
+likes[], createdAt (TTL index: expires after 24 hours)
+```
+
+### Journey
+```
+userId (ref: User), title, description, steps[{postId, stepIndex, addedAt}],
+startDate, endDate, isCompleted, createdAt
+```
+
+### Notification
+```
+userId (ref: User), type (like|comment|follow), fromUser (ref: User),
+postId (ref: Post), isRead, createdAt
+```
+
+---
+
+## 🔮 Future Improvements
+
+- [ ] **AI Model Upgrade** — Replace the CSV-based filtering engine with a trained Python ML model (cosine similarity / collaborative filtering).
+- [ ] **Direct Messaging** — Private real-time chat between users via Socket.io rooms.
+- [ ] **Progressive Web App** — Add a service worker and manifest for offline support.
+- [ ] **Post Bookmarks** — Save posts to personal reading lists.
+- [ ] **Multi-language Support** — i18n with React Intl.
+- [ ] **Analytics Dashboard** — Post reach, engagement rates, and follower growth charts.
+- [ ] **Verified Accounts** — Email verification flow after registration.
+
+---
+
+## 📄 License
+
+This project is licensed under the **MIT License** — see the [LICENSE](./LICENSE) file for details.
+
+---
+
+## 👤 Author
+
+**Rabeel Ahmed**
+
+- GitHub: [@RabeelAhmed](https://github.com/RabeelAhmed)
+- Email: rabeelsulehria3@gmail.com
+
+---
+
+<div align="center">
+
+⭐ If you found this project useful, please consider giving it a star!
+
+</div>
+]]>
