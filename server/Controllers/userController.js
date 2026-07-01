@@ -1,4 +1,3 @@
-
 const Post = require("../Models/post");
 const user = require("../Models/User");
 const mongoose = require("mongoose");
@@ -113,6 +112,112 @@ const followAndUnfollow = async (req, res) => {
     return res.status(500).send(error(500, "Something went wrong"));
   }
 };
+
+const getFeedData = async (req, res) => {
+  try {
+    // Get the current user's ID
+    const curUserId = req.user.user_Id;
+    // Fetch the current user and populate 'following'
+    const curUser = await user.findById(curUserId);
+    // Get the IDs of the users that the current user follows
+    const followingIds = curUser.following.map((item) => item._id);
+    followingIds.push(req.user.user_Id); // Add current user's own ID to include their own posts in the feed
+    // Fetch posts from users that the current user follows
+
+    const followingPosts = await Post.find({
+      userId: { $in: followingIds },
+    })
+      .populate({
+        path: "userId", // Populate user data
+      })
+      .populate("journeyId")
+      .populate({
+        path: "comments", // Populate comments
+        populate: {
+          path: "userId", // Assuming each comment has an 'author' field to populate
+          select: "fullname profilePicture",
+        },
+      });
+    const trending = await getTrendingPosts();
+    console.log('After Treanding :',trending);
+        const postMap = new Map();
+    // Add following posts to the map
+    followingPosts.forEach((post) => {
+      postMap.set(post._id.toString(), post); // Use string ID as key
+    });
+    // Add trending posts to the map (skipping duplicates)
+    trending.forEach((post) => {
+      if (!postMap.has(post._id.toString())) {
+        postMap.set(post._id.toString(), post);
+      }
+    });
+    // Convert the map values back to an array
+    const fullPosts = Array.from(postMap.values());
+    const posts = fullPosts
+      .map((item) => mapPostOutput(item, curUserId))
+      .reverse(); // Reverse to show newest first
+    // Send back only the posts (no user details or suggestions)
+    return res.send(success(200, posts));
+  } catch (err) {
+    // If an error occurs, send a 500 error response
+    return res.send(error(500, err));
+  }
+};
+
+const getUserProfile = async (req, res) => {
+  try {
+    const { _id } = req.params;
+    console.log(_id);
+    if (!mongoose.Types.ObjectId.isValid(_id)) {
+      return res.status(400).json({ message: "Invalid user ID format" });
+    }
+    // Find the user by ID
+    const userProfile = await user.findById(_id);
+
+    // If user profile not found, return a 404 error
+    if (!userProfile) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Populate the posts with the 'userId' field data
+    const allPosts = await userProfile.populate({
+      path: "posts", // Assuming 'posts' is an array of post references in the user model
+      populate: [
+        {
+          path: "userId", // Assuming each post has a 'userId' field that you want to populate
+        },
+        {
+          path: "journeyId",
+        },
+        {
+          path: "comments",
+          populate: { path: "userId", select: "fullname profilePicture" }, // Assuming 'comments' is another field to populate
+        },
+      ],
+    });
+
+    const posts = allPosts.posts
+      .map((item) => mapPostOutput(item, req.user.user_Id))
+      .reverse();
+    const isFollowing = userProfile.followers.includes(req.user.user_Id);
+    // Log populated user profile (you can modify this or remove it later)
+    // Return the user profile and posts
+    return res.status(200).json({
+      success: true,
+      data: { userProfile, posts, isFollowing },
+    });
+  } catch (err) {
+    console.error(err);
+    // Handle errors
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: err.message,
+    });
+  }
+};
+
+
 const getNotifications = async (req,res) => {
   try {
     const curUserId = req.user.user_Id;
@@ -126,7 +231,6 @@ const getNotifications = async (req,res) => {
     return res.status(500).json({ success: false, message: "Server error", error: error.message });
   }
 };
-module.exports = {
-  followAndUnfollow,
-  getNotifications,
-};
+
+
+module.exports = { followAndUnfollow, getFeedData, getUserProfile, getNotifications };
