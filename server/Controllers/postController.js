@@ -1,4 +1,3 @@
-
 const Post = require("../Models/post");
 const user = require("../Models/User");
 const mongoose = require("mongoose");
@@ -84,6 +83,7 @@ const createPost = async (req, res) => {
     return res.send(error(500, "Something went wrong"));
   }
 };
+
 const generateSignature = (req, res) => {
   const timestamp = Math.round(new Date().getTime() / 1000);
 
@@ -107,34 +107,8 @@ const generateSignature = (req, res) => {
 
   return res.send(success(201, { data }));
 };
-const getPost = async (req, res) => {
-  try {
-    const { _id } = req.params;
 
-    if (!mongoose.Types.ObjectId.isValid(_id)) {
-      return res.status(400).send(error("Invalid post ID"));
-    }
 
-    const post = await Post.findById(_id)
-      .populate("userId")
-      .populate("comments.userId");
-
-    if (!post) {
-      return res.status(404).send(error("Post Not Found"));
-    }
-
-    const curUserId = req.user?.user_Id || null;
-
-    return res.status(200).send(
-      success(200, {
-        post: mapPostOutput(post, curUserId),
-      })
-    );
-  } catch (err) {
-    console.error(err);
-    return res.status(500).send(error("Something went wrong"));
-  }
-};
 const likeAndUnlikePost = async (req, res) => {
   try {
     const { postId } = req.body;
@@ -216,6 +190,7 @@ const likeAndUnlikePost = async (req, res) => {
     return res.status(500).json(error(500, "Something went wrong"));
   }
 };
+
 const addComment = async (req, res) => {
   try {
     const { postId, commentText } = req.body;
@@ -296,6 +271,7 @@ const addComment = async (req, res) => {
     return res.send(error(500, "Something went wrong"));
   }
 };
+
 const deleteComment = async (req, res) => {
   try {
     const { postId, commentId } = req.body;
@@ -333,11 +309,136 @@ const deleteComment = async (req, res) => {
     return res.send(error(500, "Something went wrong"));
   }
 };
+
+const deletePost = async (req, res) => {
+  try {
+    const { postId } = req.body;
+    const curUserId = req.user.user_Id;
+    const post = await Post.findById(postId).populate("userId");
+    const curUser = await user.findById(curUserId);
+    if (!post) {
+      return res.send(error(404, "Post Not Found"));
+    }
+    if (post.userId._id.toString() !== curUserId) {
+      return res.send(error(403, "Only Owners can Delete Their Post"));
+    }
+    const index = curUser.posts.indexOf(postId);
+    if (index > -1) {
+      curUser.posts.splice(index, 1);
+      await curUser.save();
+    }
+
+    // Remove the post itself
+    await Post.findByIdAndDelete(postId);
+    return res
+      .status(200)
+      .json(success(200, { post: mapPostOutput(post, curUserId) }));
+  } catch (err) {
+    return res.send(error(500, "Something went wrong"));
+  }
+};
+const getPost = async (req, res) => {
+  try {
+    const { _id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(_id)) {
+      return res.status(400).send(error("Invalid post ID"));
+    }
+
+    const post = await Post.findById(_id)
+      .populate("userId")
+      .populate("comments.userId");
+
+    if (!post) {
+      return res.status(404).send(error("Post Not Found"));
+    }
+
+    const curUserId = req.user?.user_Id || null;
+
+    return res.status(200).send(
+      success(200, {
+        post: mapPostOutput(post, curUserId),
+      })
+    );
+  } catch (err) {
+    console.error(err);
+    return res.status(500).send(error("Something went wrong"));
+  }
+};
+
+
+const searchAll = async (req, res) => {
+  try {
+    let { query } = req.query;
+    const curUserId = req.user.user_Id;
+
+    if (!query || query.trim() === "") {
+      return res.status(400).json(error(400, "Search query is required"));
+    }
+
+    query = query.trim();
+
+    // Remove leading # if present
+    if (query.startsWith("#")) {
+      query = query.slice(1);
+    }
+
+    // 1. 🔎 Search Users
+    const users = await user
+      .find({
+        $or: [
+          { fullname: { $regex: query, $options: "i" } },
+          { username: { $regex: query, $options: "i" } },
+          { bio: { $regex: query, $options: "i" } },
+        ],
+      })
+      .select("username fullname profilePicture bio");
+
+    // 2. 🔎 Search Posts
+    const postFilter = {
+      $or: [
+        { title: { $regex: query, $options: "i" } },
+        { description: { $regex: query, $options: "i" } },
+        { location: { $regex: query, $options: "i" } },
+        { hashtags: { $regex: query, $options: "i" } }, // matches stored hashtags without #
+      ],
+    };
+
+    const posts = await Post.find(postFilter)
+      .populate("userId", "fullname username profilePicture")
+      .populate("journeyId")
+      .populate({
+        path: "comments",
+        populate: {
+          path: "userId",
+          select: "fullname profilePicture",
+        },
+      });
+
+    // 3. 🧹 Format posts
+    const formattedPosts = posts.map((post) => mapPostOutput(post, curUserId));
+
+    return res.status(200).json(
+      success(200, {
+        users,
+        posts: formattedPosts,
+      })
+    );
+  } catch (err) {
+    console.error("Search error:", err);
+    return res.status(500).json(error(500, "Internal Server Error"));
+  }
+};
+
+
+
 module.exports = {
   createPost,
-  getPost,
-  generateSignature,
   likeAndUnlikePost,
   addComment,
   deleteComment,
+  deletePost,
+  getPost,
+  searchAll,
+  generateSignature,
 };
