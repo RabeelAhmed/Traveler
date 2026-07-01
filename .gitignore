@@ -1,0 +1,7 @@
+node_modules/
+.backup/
+.gemini/
+.env
+.env.*
+dist/
+.git_commit_msg.tmp
