@@ -6,6 +6,8 @@ import Signup from "./Pages/Authentication/Signup";
 import Home from "./Pages/Home";
 import Landing from "./Pages/Landing";
 import Forum from "./Pages/Forum";
+import Story from "./Pages/Story";
+import UploadStory from "./Components/UploadStory";
 import FeedLoad from "./Components/FeedLoad";
 import { Routes, Route } from "react-router-dom";
 import Navbar from "./Components/Navbar";
@@ -25,6 +27,8 @@ function App() {
         </Route>
         <Route element={<RequireUser />}>
           <Route path="/home" element={<Home />} />
+          <Route path="/story" element={<Story />} />
+          <Route path="/addstory" element={<UploadStory />} />
           <Route path="/" element={<FeedLoad />}>
             <Route path="/forum" element={<Forum />} />
           </Route>
