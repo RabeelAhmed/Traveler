@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply font-sans text-sand-800 bg-sand-50;
+  -webkit-tap-highlight-color: transparent;
+}
+
+@layer utilities {
+  .glass-dark {
+    @apply bg-ocean-950/40 backdrop-blur-xl border border-white/10;
+  }
+  .glass-light {
+    @apply bg-white/70 backdrop-blur-xl border border-white/40;
+  }
+}
+
+.container {
+  @apply mx-auto px-4;
+}
