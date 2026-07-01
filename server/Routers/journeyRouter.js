@@ -1,8 +1,15 @@
-const router = require('express').Router()
-const {createJourney, addStepToJourney} = require('../Controllers/journeyController')
-const {verifyAuthToken} = require('../Middleware/jwtAuthMiddleware')
-const {multipleUpload} = require('../Middleware/uploads')
+const router = require("express").Router();
+const {
+  startJourney,
+  addStep,
+  endJourney,
+  getJourney,
+} = require("../Controllers/journeyController");
+const { verifyAuthToken, optionalAuthToken } = require("../Middleware/jwtAuthMiddleware");
 
-router.post('/createjourney',verifyAuthToken,createJourney);
-router.post('/addsteptojourney',verifyAuthToken,multipleUpload,addStepToJourney);
+router.post("/start", verifyAuthToken, startJourney);
+router.post("/:id/addstep", verifyAuthToken, addStep);
+router.post("/:id/end", verifyAuthToken, endJourney);
+router.get("/:id", optionalAuthToken, getJourney);
+
 module.exports = router;

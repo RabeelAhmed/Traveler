@@ -1,4 +1,3 @@
-
 const Journey = require("../Models/journey");
 const Post = require("../Models/post");
 const User = require("../Models/User");
@@ -58,6 +57,7 @@ const startJourney = async (req, res) => {
         post: mapPostOutput(newPost, curUserId),
         message: "Journey started successfully",
       })
+    );
   } catch (err) {
     console.error("StartJourney Error:", err);
     return res.send(error(500, "Something went wrong starting the journey"));
@@ -149,7 +149,69 @@ const endJourney = async (req, res) => {
     await journey.save();
 
     return res.send(
+      success(200, {
+        journey,
+        message: "Journey completed successfully",
+      })
+    );
+  } catch (err) {
+    console.error("EndJourney Error:", err);
+    return res.send(error(500, "Something went wrong completing the journey"));
+  }
+};
+
+const getJourney = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const curUserId = req.user?.user_Id;
+
+    const journey = await Journey.findById(id)
+      .populate("owner", "fullname username profilePicture")
+      .populate({
+        path: "steps",
+        populate: [
+          {
+            path: "userId",
+          },
+          {
+            path: "comments",
+            populate: {
+              path: "userId",
+              select: "fullname profilePicture",
+            },
+          },
+        ],
+      });
+
+    if (!journey) {
+      return res.send(error(404, "Journey not found"));
+    }
+
+    // Format steps using mapPostOutput to match feed post structure
+    const mappedSteps = journey.steps.map((step) => mapPostOutput(step, curUserId));
+
+    return res.send(
+      success(200, {
+        journey: {
+          _id: journey._id,
+          owner: journey.owner,
+          title: journey.title,
+          isActive: journey.isActive,
+          startedAt: journey.startedAt,
+          endedAt: journey.endedAt,
+          steps: mappedSteps,
+        },
+      })
+    );
+  } catch (err) {
+    console.error("GetJourney Error:", err);
+    return res.send(error(500, "Something went wrong retrieving journey details"));
+  }
+};
+
 module.exports = {
-  createJourney,
-  addStepToJourney,
+  startJourney,
+  addStep,
+  endJourney,
+  getJourney,
 };
