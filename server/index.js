@@ -4,6 +4,7 @@ const authentication = require('./Routers/authenticationRouters');
 const postRouter = require('./Routers/postRouter');
 const story = require('./Routers/storyRouter');
 const journeyRouter = require('./Routers/journeyRouter');
+const userRouter = require('./Routers/userRouter');
 const morgan = require('morgan');
 const cors = require('cors');
 
@@ -25,6 +26,7 @@ app.use('/auth', authentication)
 app.use('/post', postRouter)
 app.use('/story', story)
 app.use('/journey', journeyRouter)
+app.use('/user', userRouter)
 
 app.get('/', (req, res) => {
   res.send('Hello World!')
