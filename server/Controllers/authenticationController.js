@@ -1,4 +1,3 @@
-
 const user = require("../Models/User");
 const { success, error } = require("../Utils/responseWrapper");
 const { signjwt } = require("../Middleware/jwtAuthMiddleware");
@@ -69,6 +68,7 @@ const signup = async (req, res) => {
     return res.send(error(500, err.message));
   }
 };
+
 const generateProfilePicSignature = (req, res) => {
   const timestamp = Math.round(new Date().getTime() / 1000);
 
@@ -93,6 +93,7 @@ const generateProfilePicSignature = (req, res) => {
     apiKey: process.env.API_KEY,
   });
 };
+
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -115,6 +116,105 @@ const login = async (req, res) => {
     return res.send(error(400, err));
   }
 };
+
+const getProfile = async (req, res) => {
+  try {
+    const user_Id = req.user.user_Id;
+    // Find the user by ID
+    const userProfile = await user.findById(user_Id);
+
+    // If user profile not found, return a 404 error
+    if (!userProfile) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Populate the posts with the 'userId' field data
+    const allPosts = await userProfile.populate({
+      path: "posts", // Assuming 'posts' is an array of post references in the user model
+      populate: [
+        {
+          path: "userId", // Assuming each post has a 'userId' field that you want to populate
+        },
+        {
+          path: "comments",
+          populate: { path: "userId", select: "fullname profilePicture" }, // Assuming 'comments' is another field to populate
+        },
+      ],
+    });
+
+    const posts = allPosts?.posts
+      ?.map((item) => mapPostOutput(item, req._id))
+      .reverse();
+    // Log populated user profile (you can modify this or remove it later)
+    // Return the user profile and posts
+    return res.status(200).json({
+      success: true,
+      data: { userProfile, posts },
+    });
+  } catch (err) {
+    console.error(err);
+    // Handle errors
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: err.message,
+    });
+  }
+};
+
+const updateProfile = async (req, res) => {
+  try {
+    const userId = req.user.user_Id; // Extract user ID from request
+    const { fullname, bio, email, dateOfBirth } = req.body;
+    let updateFields = { fullname, bio, email, dateOfBirth };
+
+    // Handle profile picture update
+    if (req.file) {
+      if (process.env.CLOUD_NAME === "dummy" || !process.env.CLOUD_NAME) {
+        const mimeType = req.file.mimetype || "image/jpeg";
+        const base64Data = `data:${mimeType};base64,${req.file.buffer.toString("base64")}`;
+        updateFields.profilePicture = {
+          public_id: "dummy_profile_pic_" + Date.now(),
+          url: base64Data
+        };
+      } else {
+        // Upload new image to Cloudinary
+        const uploadPromise = new Promise((resolve, reject) => {
+          const stream = cloudinary.uploader.upload_stream(
+            { folder: "Profile_Pictures" },
+            (error, result) => {
+              if (error) {
+                return reject({ message: "Upload to Cloudinary failed", error });
+              }
+              resolve({ public_id: result.public_id, url: result.secure_url });
+            }
+          );
+          stream.end(req.file.buffer);
+        });
+
+        const CloudImg = await uploadPromise;
+        updateFields.profilePicture = CloudImg;
+      }
+    }
+
+    // Update user profile
+    const updatedUser = await user.findByIdAndUpdate(userId, updateFields, {
+      new: true,
+    });
+
+    if (!updatedUser) {
+      return res.send(error(404, "User not found"));
+    }
+
+    return res.send(
+      success(200, { message: "Profile updated successfully", updatedUser })
+    );
+  } catch (err) {
+    console.error(err);
+    return res.send(error(500, err.message));
+  }
+};
+
 const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
@@ -154,6 +254,7 @@ const forgotPassword = async (req, res) => {
     res.status(500).json({ error: "Failed to send reset email" });
   }
 };
+
 // Reset password (using token)
 const resetPassword = async (req, res) => {
   try {
@@ -179,9 +280,12 @@ const resetPassword = async (req, res) => {
     res.status(500).json({ error: "Failed to reset password" });
   }
 };
+
 module.exports = {
   signup,
   login,
+  getProfile,
+  updateProfile,
   generateProfilePicSignature,
   forgotPassword,
   resetPassword,
