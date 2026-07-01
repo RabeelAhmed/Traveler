@@ -1,5 +1,6 @@
 const express = require('express')
 const dbconnection = require('./db');
+const authentication = require('./Routers/authenticationRouters');
 const morgan = require('morgan');
 const cors = require('cors');
 
@@ -16,6 +17,8 @@ app.use(cors({
 app.use(morgan('common'));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+app.use('/auth', authentication)
 
 app.get('/', (req, res) => {
   res.send('Hello World!')
