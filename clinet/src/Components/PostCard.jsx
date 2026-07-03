@@ -4,11 +4,13 @@ import { useDispatch, useSelector } from "react-redux";
 import { AiOutlineLike, AiFillLike } from "react-icons/ai";
 import { MdOutlineModeComment } from "react-icons/md";
 import { CiLocationOn } from "react-icons/ci";
+import { BsBookmark, BsBookmarkFill } from "react-icons/bs";
 import { motion } from "framer-motion";
 import ProfileImage from "./ProfileImage";
 import JourneyCard from "./JourneyCard";
 import { likeAndUnlikePost } from "../Toolkit/slices/feedSlice";
 import { toggleLike } from "../Toolkit/slices/userProfileSlice";
+import { toggleBookmark } from "../Toolkit/slices/bookmarkSlice";
 import { springPress } from "../utils/motion";
 
 const PostCard = ({ post }) => {
@@ -22,6 +24,8 @@ const PostCard = ({ post }) => {
 
   const isLoggedIn = useSelector((state) => state.appConfig.isLoggedIn);
   const myProfile = useSelector((state) => state.appConfig.myProfile);
+  const savedPostIds = useSelector((state) => state.bookmark?.savedPostIds) || [];
+  const isSaved = savedPostIds.includes(post?.id);
 
   const [isLiked, setIsLiked] = useState(post?.isLikedByUser);
   const [likesCount, setLikesCount] = useState(post?.likesCount || 0);
@@ -30,6 +34,15 @@ const PostCard = ({ post }) => {
   const openPost = (e) => {
     e.preventDefault();
     navigate(`/post/${post?.id}`);
+  };
+
+  const handleBookmarkClick = (e) => {
+    e.stopPropagation();
+    if (!isLoggedIn) {
+      navigate("/login", { state: { from: location } });
+      return;
+    }
+    dispatch(toggleBookmark(post.id));
   };
 
   const handleUserProfile = (e) => {
@@ -137,6 +150,26 @@ const PostCard = ({ post }) => {
             >
               <MdOutlineModeComment className="text-base text-sand-400" />
               <span>{post?.comments?.length || 0}</span>
+            </motion.button>
+
+            {/* Bookmark button */}
+            <motion.button
+              {...springPress}
+              onClick={handleBookmarkClick}
+              type="button"
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-semibold tracking-tight transition-all duration-200 ${
+                isSaved
+                  ? "bg-ocean-50 border-ocean-100 text-ocean-600 shadow-sm"
+                  : "bg-sand-50 border-sand-200/80 hover:bg-sand-100 text-sand-500"
+              }`}
+            >
+              <div className="flex items-center">
+                {isSaved ? (
+                  <BsBookmarkFill className="text-base text-ocean-600" />
+                ) : (
+                  <BsBookmark className="text-base text-sand-400" />
+                )}
+              </div>
             </motion.button>
           </div>
         </div>

@@ -3,12 +3,14 @@ import { useDispatch, useSelector } from "react-redux";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { FaUserEdit, FaShare, FaFacebookF, FaTwitter, FaWhatsapp, FaCopy } from "react-icons/fa";
 import { HiCheck } from "react-icons/hi";
+import { BsBookmark } from "react-icons/bs";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   followAndUnfollowUser,
   getUserProfile,
   resetProfile,
 } from "../Toolkit/slices/userProfileSlice";
+import { getSavedPosts } from "../Toolkit/slices/bookmarkSlice";
 import NewPostPrompt from "../Components/NewPostPrompt";
 import PostCard from "../Components/PostCard";
 import Achivements from "../Components/Achivements";
@@ -58,11 +60,12 @@ const Profile = () => {
   const profile = useSelector((state) => state.userProfile.user);
   const posts = useSelector((state) => state.userProfile.posts);
   const isFollowing = useSelector((state) => state.userProfile.isFollowing);
+  const savedPosts = useSelector((state) => state.bookmark?.savedPosts) || [];
 
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const [owner, setOwner] = useState(false);
-  const [activeTab, setActiveTab] = useState("journeys"); // "journeys" | "achievements"
+  const [activeTab, setActiveTab] = useState("journeys"); // "journeys" | "achievements" | "saved"
 
   const postUrl = window.location.href;
 
@@ -92,6 +95,12 @@ const Profile = () => {
       }
     });
   }, [id, myProfile, dispatch]);
+
+  useEffect(() => {
+    if (activeTab === "saved" && savedPosts.length === 0) {
+      dispatch(getSavedPosts());
+    }
+  }, [activeTab, savedPosts.length, dispatch]);
 
   const handleFollow = () => {
     dispatch(followAndUnfollowUser({ followId: id }));
@@ -262,6 +271,23 @@ const Profile = () => {
                 )}
               </button>
 
+              {owner && (
+                <button
+                  onClick={() => setActiveTab("saved")}
+                  className={`relative px-6 py-3 font-display font-bold text-sm tracking-tight transition-colors duration-200 ${
+                    activeTab === "saved" ? "text-ocean-600" : "text-sand-400 hover:text-sand-700"
+                  }`}
+                >
+                  <span>Saved</span>
+                  {activeTab === "saved" && (
+                    <motion.div
+                      layoutId="profile-tab-pill"
+                      className="absolute bottom-0 inset-x-0 h-0.5 bg-ocean-600 rounded-full"
+                    />
+                  )}
+                </button>
+              )}
+
               <button
                 onClick={() => setActiveTab("achievements")}
                 className={`relative px-6 py-3 font-display font-bold text-sm tracking-tight transition-colors duration-200 ${
@@ -280,7 +306,7 @@ const Profile = () => {
 
             {/* Tab Panels */}
             <AnimatePresence mode="wait">
-              {activeTab === "journeys" ? (
+              {activeTab === "journeys" && (
                 <motion.div
                   key="journeys"
                   initial={{ opacity: 0, y: 10 }}
@@ -310,7 +336,42 @@ const Profile = () => {
                     )}
                   </motion.div>
                 </motion.div>
-              ) : (
+              )}
+
+              {activeTab === "saved" && (
+                <motion.div
+                  key="saved"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <motion.div
+                    variants={staggerContainer(0.06, 0.04)}
+                    initial="hidden"
+                    animate="visible"
+                    className="space-y-4"
+                  >
+                    {savedPosts?.length > 0 ? (
+                      savedPosts.map((post) => (
+                        <motion.div key={post.id} variants={fadeUp}>
+                          <PostCard post={post} />
+                        </motion.div>
+                      ))
+                    ) : (
+                      <motion.div
+                        variants={fadeUp}
+                        className="bg-white rounded-3xl p-12 border border-sand-100 text-center text-sand-500 font-sans shadow-[0_8px_30px_rgb(20,41,57,0.01)] flex flex-col items-center justify-center"
+                      >
+                        <BsBookmark className="text-4xl text-sand-300 mb-3" />
+                        <p className="font-semibold text-sand-600">Nothing saved yet</p>
+                      </motion.div>
+                    )}
+                  </motion.div>
+                </motion.div>
+              )}
+
+              {activeTab === "achievements" && (
                 <motion.div
                   key="achievements"
                   initial={{ opacity: 0, y: 10 }}

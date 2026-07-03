@@ -83,6 +83,7 @@ const userSchema = new Schema({
       },
     },
   ],
+  savedPosts: [{ type: Schema.Types.ObjectId, ref: 'Post' }],
   verified: {
     type: Number,
     enum: [0, 1],
