@@ -82,8 +82,8 @@ const JourneyCard = ({ post }) => {
             />
 
             {/* Journey corner Tag Ribbon */}
-            <div className="absolute top-0 right-0 bg-jade-500 text-white text-[10px] uppercase font-bold py-1.5 px-4 rounded-bl-2xl shadow-sm z-10 font-sans tracking-widest">
-              Journey
+            <div className={`absolute top-0 right-0 ${isActive ? 'bg-sunset-500' : 'bg-jade-600'} text-white text-[10px] uppercase font-bold py-1.5 px-4 rounded-bl-2xl shadow-sm z-10 font-sans tracking-widest`}>
+              {isActive ? "Ongoing Journey" : "Completed Journey"}
             </div>
           </div>
         </div>
@@ -157,8 +157,12 @@ const JourneyCard = ({ post }) => {
         <div className="mt-4">
           
           {/* Stops summary line */}
-          <span className="inline-block text-[10px] font-bold text-jade-650 bg-jade-50 border border-jade-100/50 rounded-full px-2.5 py-0.5 uppercase tracking-wider mb-2">
-            {isActive ? `Ongoing • ${stopsCount} Stops` : `Completed • ${stopsCount} Stops`}
+          <span className={`inline-block text-[10px] font-bold rounded-full px-2.5 py-0.5 uppercase tracking-wider mb-2 ${
+            isActive 
+              ? 'text-sunset-650 bg-sunset-50 border border-sunset-100/50' 
+              : 'text-jade-650 bg-jade-50 border border-jade-100/50'
+          }`}>
+            {isActive ? `Ongoing Journey • ${stopsCount} Stops` : `Completed Journey • ${stopsCount} Stops`}
           </span>
 
           <h2 className="font-display font-extrabold text-lg md:text-xl text-sand-900 mb-2 leading-snug hover:text-ocean-600 transition-colors">

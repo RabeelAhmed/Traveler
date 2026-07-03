@@ -211,11 +211,11 @@ const JourneyTreeView = () => {
             <div className="flex items-center gap-3">
               {isActive ? (
                 <span className="text-[10px] font-bold text-sunset-600 bg-sunset-50 border border-sunset-100 rounded-full px-3 py-1 uppercase tracking-wider">
-                  Active
+                  Ongoing Journey
                 </span>
               ) : (
                 <span className="text-[10px] font-bold text-jade-600 bg-jade-50 border border-jade-100 rounded-full px-3 py-1 uppercase tracking-wider flex items-center gap-1">
-                  <FaFlagCheckered /> Completed
+                  <FaFlagCheckered /> Completed Journey
                 </span>
               )}
 

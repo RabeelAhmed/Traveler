@@ -176,6 +176,17 @@ const PostCard = ({ post }) => {
 
         {/* Post Title & Description */}
         <div className="mt-4">
+          {post?.journeyId && (
+            <span className={`inline-block text-[10px] font-bold rounded-full px-2.5 py-0.5 uppercase tracking-wider mb-2 ${
+              post?.journeyIsActive 
+                ? 'text-sunset-650 bg-sunset-50 border border-sunset-100/50' 
+                : 'text-jade-650 bg-jade-50 border border-jade-100/50'
+            }`}>
+              {post?.journeyIsActive 
+                ? `Ongoing Journey • Stop ${post?.stepIndex + 1}` 
+                : `Completed Journey • Stop ${post?.stepIndex + 1}`}
+            </span>
+          )}
           <h2 className="font-display font-semibold text-lg md:text-xl text-sand-900 mb-2 hover:text-ocean-600 transition-colors line-clamp-2 leading-snug">
             {post?.title}
           </h2>
