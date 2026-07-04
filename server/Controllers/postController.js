@@ -432,6 +432,38 @@ const searchAll = async (req, res) => {
 
 
 
+const getTrendingDestinations = async (req, res) => {
+  try {
+    const destinations = await Post.aggregate([
+      {
+        $group: {
+          _id: '$location',
+          postCount: { $sum: 1 },
+          avgRating: { $avg: '$rating' },
+          thumbnail: { $first: { $arrayElemAt: ['$media', 0] } },
+        },
+      },
+      { $sort: { postCount: -1 } },
+      { $limit: 20 },
+      {
+        $project: {
+          location: '$_id',
+          postCount: 1,
+          avgRating: 1,
+          thumbnail: 1,
+          _id: 0,
+        },
+      },
+    ]);
+    return res.status(200).send(success(200, { destinations }));
+  } catch (err) {
+    console.error('getTrendingDestinations error:', err);
+    return res.status(500).send(error(500, 'Something went wrong'));
+  }
+};
+
+
+
 module.exports = {
   createPost,
   likeAndUnlikePost,
@@ -441,4 +473,5 @@ module.exports = {
   getPost,
   searchAll,
   generateSignature,
+  getTrendingDestinations,
 };

@@ -1,14 +1,17 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { PiChatsCircle } from "react-icons/pi";
 import { IoIosAddCircle } from "react-icons/io";
 import { FaEdit } from "react-icons/fa";
 import { RiWechatPayLine } from "react-icons/ri";
 import { IoSearchSharp } from "react-icons/io5";
+import { CiLocationOn } from "react-icons/ci";
 import { useNavigate } from "react-router";
-import { useSelector } from "react-redux";
+import { Link } from "react-router-dom";
+import { useSelector, useDispatch } from "react-redux";
 import { FaFacebookF, FaTwitter, FaWhatsapp } from "react-icons/fa";
 import { motion } from "framer-motion";
 import { springPress } from "../utils/motion";
+import { getTrendingDestinations } from "../Toolkit/slices/trendingSlice";
 
 export const LeftRail = ({ active, setActive }) => {
   const navigate = useNavigate();
@@ -64,8 +67,16 @@ export const LeftRail = ({ active, setActive }) => {
 
 export const RightDiscovery = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const myProfile = useSelector((state) => state.appConfig.myProfile);
+  const { destinations } = useSelector((state) => state.trending);
   const [searchTerm, setSearchTerm] = useState("");
+
+  useEffect(() => {
+    if (destinations.length === 0) {
+      dispatch(getTrendingDestinations());
+    }
+  }, [dispatch, destinations.length]);
 
   // Developer Note: Sidebar.jsx's share handlers reference a postUrl variable that doesn't exist in that file.
   // We define it locally here for profile sharing.
@@ -166,6 +177,53 @@ export const RightDiscovery = () => {
             </button>
           ))}
         </div>
+      </div>
+
+      {/* 🔥 Trending Places Card */}
+      <div className="bg-white rounded-3xl border border-sand-100 p-5 shadow-[0_8px_30px_rgb(20,41,57,0.02)]">
+        <h3 className="font-display font-bold text-xs text-sand-400 uppercase tracking-widest mb-4">
+          🔥 Trending Places
+        </h3>
+
+        {destinations.length === 0 ? (
+          <p className="text-xs text-sand-400 text-center py-3">Loading destinations...</p>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {destinations.slice(0, 5).map((dest, index) => (
+              <div key={`${dest.location}-${index}`} className="flex items-center gap-3">
+                {/* Thumbnail circle */}
+                {dest.thumbnail?.url ? (
+                  <img
+                    src={dest.thumbnail.url}
+                    alt={dest.location}
+                    className="w-8 h-8 rounded-full object-cover flex-shrink-0 border border-sand-100"
+                  />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-sand-100 flex items-center justify-center flex-shrink-0">
+                    <CiLocationOn className="text-sand-400 text-sm" />
+                  </div>
+                )}
+                {/* Location name + count */}
+                <div className="flex-1 min-w-0">
+                  <p className="font-sans text-xs font-bold text-sand-800 truncate leading-tight">
+                    {dest.location}
+                  </p>
+                  <p className="font-sans text-[10px] text-sand-400">
+                    {dest.postCount} {dest.postCount === 1 ? "post" : "posts"}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* See all link */}
+        <Link
+          to="/trending"
+          className="block text-center text-xs font-bold text-ocean-600 hover:text-ocean-700 mt-4 transition-colors"
+        >
+          See all →
+        </Link>
       </div>
     </div>
   );

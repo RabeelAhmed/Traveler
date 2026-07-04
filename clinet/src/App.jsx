@@ -30,6 +30,7 @@ import TravelAdvisor from "./Pages/TravelAdvisor";
 import Search from "./Pages/Search";
 import Loader from "./Components/Loader";
 import JourneyTreeView from "./Pages/JourneyTreeView";
+import TrendingDestinations from "./Pages/TrendingDestinations";
 
 import { KEY_ACCESS_TOKEN, getItem } from './utils/LocalStorageManager'
 import { setLoggedIn} from './Toolkit/slices/appConfigSlice';
@@ -131,6 +132,7 @@ function App() {
             <Route path="/addstory" element={<UploadStory />} />
             <Route path="/search" element={<Search />} />
             <Route path="/journey/:id" element={<JourneyTreeView />} />
+            <Route path="/trending" element={<TrendingDestinations />} />
             <Route path="/" element={<FeedLoad />}>
               <Route path="/forum" element={<Forum />} />
               
