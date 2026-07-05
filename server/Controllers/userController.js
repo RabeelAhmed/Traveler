@@ -231,6 +231,21 @@ const getNotifications = async (req,res) => {
     return res.status(500).json({ success: false, message: "Server error", error: error.message });
   }
 };
+const getVisitedLocations = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const locations = await Post.aggregate([
+      { $match: { userId: new mongoose.Types.ObjectId(userId) } },
+      { $group: { _id: '$location', count: { $sum: 1 } } },
+      { $project: { location: '$_id', count: 1, _id: 0 } },
+    ]);
+    return res.status(200).json(success(200, { locations }));
+  } catch (err) {
+    console.error('getVisitedLocations error:', err);
+    return res.status(500).json(error(500, 'Something went wrong'));
+  }
+};
 
 
-module.exports = { followAndUnfollow, getFeedData, getUserProfile, getNotifications };
+module.exports = { followAndUnfollow, getFeedData, getUserProfile, getNotifications, getVisitedLocations };
+

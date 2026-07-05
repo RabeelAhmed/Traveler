@@ -17,6 +17,7 @@ import Achivements from "../Components/Achivements";
 import Loader from "../Components/Loader";
 import Header from "../Components/Header";
 import PageTransition from "../Components/PageTransition";
+import VisitedMap from "../Components/VisitedMap";
 import { springPress, scaleIn, fadeUp, staggerContainer } from "../utils/motion";
 
 const CountUp = ({ target }) => {
@@ -244,6 +245,16 @@ const Profile = () => {
               </p>
             </div>
           </div>
+
+          {/* Travel Footprint Map — shown only when user has posts */}
+          {posts?.length > 0 && (
+            <div className="mt-6">
+              <h3 className="font-display font-bold text-sm text-sand-700 uppercase tracking-widest mb-3 flex items-center gap-2">
+                <span>🗺️</span> Travel Footprint
+              </h3>
+              <VisitedMap userId={id} />
+            </div>
+          )}
 
           {/* New Post Prompt (Only for owner) */}
           {owner && (
