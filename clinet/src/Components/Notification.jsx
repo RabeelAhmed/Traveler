@@ -1,19 +1,25 @@
 import React from "react";
 import { formatDistanceToNow, isToday, differenceInDays } from "date-fns";
 import { FaHeart, FaComment, FaUserPlus, FaTrophy, FaBellSlash } from "react-icons/fa";
+import { MdOutlineRoute, MdOutlineFlag, MdOutlineExplore } from "react-icons/md";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import ProfileImage from "./ProfileImage";
 import Header from "./Header";
 import PageTransition from "./PageTransition";
 import { fadeUp, staggerContainer } from "../utils/motion";
 
 const Notifications = ({ notifications = [] }) => {
+  const navigate = useNavigate();
   // Notification Messages Map
   const notificationMessages = {
     like: "liked your post! ❤️",
     comment: "commented on your post! 💬",
     follow: "followed you! 🔥",
     Achivement: "earned an achievement milestone!",
+    journey_start: "started a new journey! 🚀",
+    journey_step: "added a new step to their journey 🗺️",
+    journey_complete: "completed their journey! 🏁",
   };
 
   const badgeColors = {
@@ -21,6 +27,9 @@ const Notifications = ({ notifications = [] }) => {
     like: "bg-sunset-500 text-white",
     comment: "bg-sand-600 text-white",
     Achivement: "bg-jade-500 text-white",
+    journey_start: "bg-sunset-500 text-white",
+    journey_step: "bg-ocean-500 text-white",
+    journey_complete: "bg-jade-500 text-white",
   };
 
   const BadgeIcon = ({ type }) => {
@@ -31,6 +40,12 @@ const Notifications = ({ notifications = [] }) => {
         return <FaHeart className="text-[9px]" />;
       case "comment":
         return <FaComment className="text-[9px]" />;
+      case "journey_start":
+        return <MdOutlineExplore className="text-[9px]" />;
+      case "journey_step":
+        return <MdOutlineRoute className="text-[9px]" />;
+      case "journey_complete":
+        return <MdOutlineFlag className="text-[9px]" />;
       case "Achivement":
       default:
         return <FaTrophy className="text-[9px]" />;
@@ -61,6 +76,18 @@ const Notifications = ({ notifications = [] }) => {
   const groups = groupNotifications(notifications);
   const hasNotifications = notifications.length > 0;
 
+  // Resolve click destination: journey types open the journey, post types open the post
+  const getNotifTarget = (notif) => {
+    const journeyTypes = ['journey_start', 'journey_step', 'journey_complete'];
+    if (journeyTypes.includes(notif.type) && notif.journey) {
+      return `/journey/${notif.journey._id || notif.journey}`;
+    }
+    if (notif.post) {
+      return `/post/${notif.post._id || notif.post}`;
+    }
+    return null;
+  };
+
   const renderNotificationGroup = (title, items) => {
     if (items.length === 0) return null;
     return (
@@ -76,11 +103,15 @@ const Notifications = ({ notifications = [] }) => {
         >
           {items.map((notif, idx) => {
             const isUnread = notif.isRead === false || notif.read === false;
+            const target = getNotifTarget(notif);
             return (
               <motion.div
                 key={notif._id || idx}
                 variants={fadeUp}
-                className="flex items-center gap-4 p-4 bg-white rounded-2xl border border-sand-100/80 hover:bg-sand-50/50 shadow-[0_8px_30px_rgb(20,41,57,0.01)] transition-colors duration-300"
+                onClick={() => target && navigate(target)}
+                className={`flex items-center gap-4 p-4 bg-white rounded-2xl border border-sand-100/80 hover:bg-sand-50/50 shadow-[0_8px_30px_rgb(20,41,57,0.01)] transition-colors duration-300 ${
+                  target ? 'cursor-pointer hover:border-ocean-100' : 'cursor-default'
+                }`}
               >
                 {/* Profile Image with corner indicator badge */}
                 <div className="relative flex-shrink-0">

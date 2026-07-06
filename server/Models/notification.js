@@ -13,13 +13,19 @@ sender: {
 }, // Who triggered the event
 type: { 
     type: String, 
-    enum: ["like", "follow", "comment","Achievement"], 
+    enum: ["like", "follow", "comment", "Achievement", "journey_start", "journey_step", "journey_complete"], 
     required: true 
-}, // Like or Follow
+}, // Notification type
 post: { 
     type: mongoose.Schema.Types.ObjectId, 
-    ref: "Post" 
-}, // Optional, for likes
+    ref: "Post",
+    default: null,
+}, // Optional, for likes/comments
+journey: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Journey",
+    default: null,
+}, // Optional, for journey notifications
 isRead: { 
     type: Boolean, 
     default: false 
@@ -31,3 +37,4 @@ createdAt: {
 });
 
 module.exports = mongoose.model("Notification", notificationSchema);
+

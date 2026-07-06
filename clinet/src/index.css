@@ -19,3 +19,21 @@ body {
 .container {
   @apply mx-auto px-4;
 }
+
+/* ── Leaflet popup overrides ─ premium look ── */
+.leaflet-popup-content-wrapper {
+  border-radius: 14px !important;
+  box-shadow: 0 8px 30px rgba(20, 41, 57, 0.12) !important;
+  border: 1px solid rgba(65, 120, 159, 0.15) !important;
+  padding: 0 !important;
+  overflow: hidden;
+}
+.leaflet-popup-content {
+  margin: 10px 14px !important;
+}
+.leaflet-popup-tip-container {
+  display: none !important;
+}
+.leaflet-container {
+  font-family: inherit !important;
+}

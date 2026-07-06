@@ -5,7 +5,7 @@ const { success, error } = require("../Utils/responseWrapper");
 const { mapPostOutput } = require("../Utils/utils");
 const cloudinary = require("../Utils/cloudinaryConfig");
 const Notification = require("../Models/notification");
-const { notify } = require("../socket");
+const { notify, broadcastNewPost } = require("../socket");
 const createPost = async (req, res) => {
   try {
     const { title, description, location, rating, tags, media, hashtags } = req.body;
@@ -74,6 +74,15 @@ const createPost = async (req, res) => {
 
     auther.posts.push(newPost._id);
     await auther.save();
+
+    // Real-time feed update: push the new post to all online followers
+    if (auther.followers?.length > 0) {
+      const populated = await Post.findById(newPost._id)
+        .populate('userId')
+        .populate({ path: 'comments', populate: { path: 'userId', select: 'fullname profilePicture' } });
+      const mappedPost = mapPostOutput(populated, auther_Id);
+      broadcastNewPost(auther.followers, mappedPost);
+    }
 
     const message = "Post has been uploaded";
     return res.send(success(201, { newPost, message, achivement }));

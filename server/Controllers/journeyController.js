@@ -4,6 +4,8 @@ const User = require("../Models/User");
 const mongoose = require("mongoose");
 const { success, error } = require("../Utils/responseWrapper");
 const { mapPostOutput } = require("../Utils/utils");
+const Notification = require('../Models/notification');
+const { notify, broadcastNewPost } = require('../socket');
 
 const startJourney = async (req, res) => {
   try {
@@ -50,6 +52,27 @@ const startJourney = async (req, res) => {
     // 3. Add Post to User's posts
     author.posts.push(newPost._id);
     await author.save();
+
+    // Notify all followers that a new journey has started
+    if (author.followers?.length > 0) {
+      const populated = await Post.findById(newPost._id)
+        .populate('userId')
+        .populate({ path: 'comments', populate: { path: 'userId', select: 'fullname profilePicture' } });
+      const mappedPost = mapPostOutput(populated, curUserId);
+      // Real-time feed broadcast
+      broadcastNewPost(author.followers, mappedPost);
+      // Socket notifications
+      for (const followerId of author.followers) {
+        const notif = await Notification.create({
+          recipient: followerId,
+          sender: curUserId,
+          type: 'journey_start',
+          post: newPost._id,
+          journey: newJourney._id,
+        });
+        notify(notif);
+      }
+    }
 
     return res.send(
       success(201, {
@@ -118,6 +141,26 @@ const addStep = async (req, res) => {
     author.posts.push(newPost._id);
     await author.save();
 
+    // Notify all followers of the journey owner + broadcast to their feeds
+    const owner = await User.findById(journey.owner).select('followers');
+    if (owner && owner.followers?.length > 0) {
+      const populated = await Post.findById(newPost._id)
+        .populate('userId')
+        .populate({ path: 'comments', populate: { path: 'userId', select: 'fullname profilePicture' } });
+      const mappedPost = mapPostOutput(populated, curUserId);
+      broadcastNewPost(owner.followers, mappedPost);
+      for (const followerId of owner.followers) {
+        const notif = await Notification.create({
+          recipient: followerId,
+          sender: journey.owner,
+          type: 'journey_step',
+          post: newPost._id,
+          journey: journey._id,
+        });
+        notify(notif);
+      }
+    }
+
     return res.send(
       success(201, {
         post: mapPostOutput(newPost, curUserId),
@@ -147,6 +190,21 @@ const endJourney = async (req, res) => {
     journey.isActive = false;
     journey.endedAt = new Date();
     await journey.save();
+
+    // Notify all followers of the journey owner
+    const owner = await User.findById(journey.owner).select('followers');
+    if (owner && owner.followers?.length > 0) {
+      for (const followerId of owner.followers) {
+        const notif = await Notification.create({
+          recipient: followerId,
+          sender: journey.owner,
+          type: 'journey_complete',
+          post: null,
+          journey: journey._id,
+        });
+        notify(notif);
+      }
+    }
 
     return res.send(
       success(200, {

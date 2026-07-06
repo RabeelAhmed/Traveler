@@ -58,6 +58,16 @@ const feedSlice = createSlice({
     loading: false,
     status: "idle",
   },
+  reducers: {
+    // Called by the socket listener in App.jsx when a followed user posts
+    prependPost: (state, action) => {
+      const incoming = action.payload;
+      const alreadyExists = state.feed.some((p) => p._id === incoming._id || p.id === incoming.id);
+      if (!alreadyExists) {
+        state.feed.unshift(incoming);
+      }
+    },
+  },
   extraReducers: (builder) => {
     builder.addCase(getFeedData.fulfilled, (state, action) => {
       state.feed = action.payload;
@@ -109,4 +119,5 @@ const feedSlice = createSlice({
       })
   },
 });
+export const { prependPost } = feedSlice.actions;
 export default feedSlice.reducer;

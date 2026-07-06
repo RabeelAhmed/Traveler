@@ -249,9 +249,6 @@ const Profile = () => {
           {/* Travel Footprint Map — shown only when user has posts */}
           {posts?.length > 0 && (
             <div className="mt-6">
-              <h3 className="font-display font-bold text-sm text-sand-700 uppercase tracking-widest mb-3 flex items-center gap-2">
-                <span>🗺️</span> Travel Footprint
-              </h3>
               <VisitedMap userId={id} />
             </div>
           )}
@@ -357,6 +354,28 @@ const Profile = () => {
                   exit={{ opacity: 0, y: -10 }}
                   transition={{ duration: 0.2 }}
                 >
+                  {/* Saved Posts premium header banner */}
+                  <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-ocean-600 to-ocean-400 p-5 mb-6 flex items-center justify-between shadow-[0_8px_30px_rgba(65,120,159,0.25)]">
+                    {/* Orb decorations */}
+                    <div className="absolute -right-6 -top-6 w-28 h-28 rounded-full bg-white/10 blur-xl" />
+                    <div className="absolute right-16 bottom-0 w-16 h-16 rounded-full bg-ocean-300/30 blur-md" />
+                    <div className="relative z-10 flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-inner">
+                        <BsBookmark className="text-white text-base" />
+                      </div>
+                      <div>
+                        <p className="font-display font-extrabold text-white text-sm leading-tight">Saved Posts</p>
+                        <p className="text-ocean-200 text-[11px] font-medium mt-0.5">Your personal reading list</p>
+                      </div>
+                    </div>
+                    {savedPosts?.length > 0 && (
+                      <div className="relative z-10 bg-white/20 backdrop-blur-sm rounded-xl px-3 py-1.5 text-center">
+                        <p className="font-display font-extrabold text-white text-sm leading-none">{savedPosts.length}</p>
+                        <p className="text-ocean-200 text-[9px] font-semibold uppercase tracking-wider mt-0.5">Saved</p>
+                      </div>
+                    )}
+                  </div>
+
                   <motion.div
                     variants={staggerContainer(0.06, 0.04)}
                     initial="hidden"
@@ -372,10 +391,51 @@ const Profile = () => {
                     ) : (
                       <motion.div
                         variants={fadeUp}
-                        className="bg-white rounded-3xl p-12 border border-sand-100 text-center text-sand-500 font-sans shadow-[0_8px_30px_rgb(20,41,57,0.01)] flex flex-col items-center justify-center"
+                        className="relative overflow-hidden bg-white rounded-3xl border border-sand-100 shadow-[0_8px_30px_rgb(20,41,57,0.02)] flex flex-col items-center justify-center py-16 px-8 text-center"
                       >
-                        <BsBookmark className="text-4xl text-sand-300 mb-3" />
-                        <p className="font-semibold text-sand-600">Nothing saved yet</p>
+                        {/* Shimmer sweep */}
+                        <motion.div
+                          className="absolute inset-0 bg-gradient-to-r from-transparent via-ocean-50/40 to-transparent"
+                          initial={{ x: "-100%" }}
+                          animate={{ x: "100%" }}
+                          transition={{ repeat: Infinity, duration: 2.5, ease: "linear" }}
+                        />
+                        {/* Decorative background circles */}
+                        <div className="absolute top-4 right-4 w-20 h-20 rounded-full bg-ocean-50/60 blur-lg" />
+                        <div className="absolute bottom-4 left-4 w-16 h-16 rounded-full bg-sand-100/80 blur-md" />
+
+                        <div className="relative z-10 flex flex-col items-center gap-4">
+                          {/* Layered bookmark icon group */}
+                          <div className="relative">
+                            <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-ocean-50 to-ocean-100 border border-ocean-100/60 flex items-center justify-center shadow-md">
+                              <BsBookmark className="text-3xl text-ocean-400" />
+                            </div>
+                            {/* Small floating orbs */}
+                            <motion.div
+                              animate={{ y: [-3, 3, -3] }}
+                              transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
+                              className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-amber-100 border border-amber-200 flex items-center justify-center text-xs"
+                            >
+                              ✨
+                            </motion.div>
+                          </div>
+
+                          <div>
+                            <p className="font-display font-bold text-lg text-sand-700 mb-1">Nothing saved yet</p>
+                            <p className="text-sm text-sand-400 max-w-xs leading-relaxed">
+                              Tap the bookmark icon on any post to save it here for later.
+                            </p>
+                          </div>
+
+                          {/* Decorative chips */}
+                          <div className="flex gap-2 mt-2 flex-wrap justify-center">
+                            {["Adventures", "Landscapes", "Hidden Gems"].map((tag) => (
+                              <span key={tag} className="px-3 py-1 bg-sand-50 border border-sand-100 rounded-full text-[11px] font-semibold text-sand-400">
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
                       </motion.div>
                     )}
                   </motion.div>

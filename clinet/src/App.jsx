@@ -34,6 +34,7 @@ import TrendingDestinations from "./Pages/TrendingDestinations";
 
 import { KEY_ACCESS_TOKEN, getItem } from './utils/LocalStorageManager'
 import { setLoggedIn} from './Toolkit/slices/appConfigSlice';
+import { prependPost } from './Toolkit/slices/feedSlice';
 
 const REACT_APP_SERVER_BASE_URL = import.meta.env.VITE_SERVER_BASE_URL;
 function App() {
@@ -56,6 +57,9 @@ function App() {
     comment: "commented on your post! 💬",
     follow: "followed you! 🔥",
     Achivement: "You Got An Achievement!",
+    journey_start: "started a new journey! 🚀",
+    journey_step: "added a new step to their journey 🗺️",
+    journey_complete: "completed their journey! 🏁",
   };
   // Fetch Notifications
   useEffect(() => {
@@ -100,7 +104,17 @@ function App() {
       });
     };
 
+    // Real-time feed: prepend new posts from followed users instantly
+    const handleNewPost = (post) => {
+      dispatch(prependPost(post));
+      toast(`✨ New post in your feed!`, {
+        icon: '🗺️',
+        style: { fontWeight: 600, fontSize: '13px' },
+      });
+    };
+
     newsocket.on("newNotification", handleNewNotification);
+    newsocket.on("newPost", handleNewPost);
 
     return () => {
       newsocket.disconnect();

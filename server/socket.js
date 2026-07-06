@@ -46,4 +46,19 @@ const notify = async(notification) => {
     }
 };
 
-module.exports = {initsocket,notify}
+/**
+ * Broadcast a newly created post to all online followers of the post owner.
+ * @param {string[]} followerIds  - array of follower userId strings
+ * @param {object}   mappedPost   - already mapPostOutput()-ed post object
+ */
+const broadcastNewPost = (followerIds, mappedPost) => {
+    if (!ioInstance) return;
+    for (const followerId of followerIds) {
+        const socketId = onlineUsers.get(followerId.toString());
+        if (socketId) {
+            ioInstance.to(socketId).emit("newPost", mappedPost);
+        }
+    }
+};
+
+module.exports = {initsocket, notify, broadcastNewPost}
