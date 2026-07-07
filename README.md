@@ -12,7 +12,7 @@
 
 **Traveler** is a MERN stack social network designed for explorers. Share travel posts, upload geo-tagged stories on an interactive map, log multi-step journey trees, and receive AI-powered destination recommendations — all in one platform.
 
-![Landing Page](docs/screenshots/landing.png)
+![Landing Page](clinet/docs/screenshots/landing.png)
 
 </div>
 
@@ -154,6 +154,8 @@ Most social platforms treat travel as a secondary activity. Traveler was built f
 ```
 traveler/
 ├── clinet/                          # React + Vite frontend
+│   ├── docs/                        # Application screenshots
+│   │   └── screenshots/
 │   ├── src/
 │   │   ├── Components/              # Reusable UI components
 │   │   │   ├── Navbar.jsx
@@ -229,9 +231,6 @@ traveler/
 │   ├── .env.example
 │   └── package.json
 │
-├── docs/
-│   └── screenshots/                 # Application screenshots
-│
 ├── .gitignore
 ├── LICENSE
 ├── CONTRIBUTING.md
@@ -248,32 +247,32 @@ traveler/
     <td align="center"><strong>Login</strong></td>
   </tr>
   <tr>
-    <td><img src="docs/screenshots/landing.png" alt="Landing Page" width="450"/></td>
-    <td><img src="docs/screenshots/login.png" alt="Login" width="450"/></td>
+    <td><img src="clinet/docs/screenshots/landing.png" alt="Landing Page" width="450"/></td>
+    <td><img src="clinet/docs/screenshots/login.png" alt="Login" width="450"/></td>
   </tr>
   <tr>
     <td align="center"><strong>Signup</strong></td>
     <td align="center"><strong>Home Feed</strong></td>
   </tr>
   <tr>
-    <td><img src="docs/screenshots/signup.png" alt="Signup" width="450"/></td>
-    <td><img src="docs/screenshots/home.png" alt="Home Feed" width="450"/></td>
+    <td><img src="clinet/docs/screenshots/signup.png" alt="Signup" width="450"/></td>
+    <td><img src="clinet/docs/screenshots/home.png" alt="Home Feed" width="450"/></td>
   </tr>
   <tr>
     <td align="center"><strong>Travel Forum</strong></td>
     <td align="center"><strong>Story Map</strong></td>
   </tr>
   <tr>
-    <td><img src="docs/screenshots/forum.png" alt="Forum" width="450"/></td>
-    <td><img src="docs/screenshots/story_viewer.png" alt="Story Map" width="450"/></td>
+    <td><img src="clinet/docs/screenshots/forum.png" alt="Forum" width="450"/></td>
+    <td><img src="clinet/docs/screenshots/story_viewer.png" alt="Story Map" width="450"/></td>
   </tr>
   <tr>
     <td align="center"><strong>Travel Advisor</strong></td>
     <td align="center"><strong>Journey Tree</strong></td>
   </tr>
   <tr>
-    <td><img src="docs/screenshots/travel_advisor.png" alt="Travel Advisor" width="450"/></td>
-    <td><img src="docs/screenshots/journey_tree.png" alt="Journey Tree" width="450"/></td>
+    <td><img src="clinet/docs/screenshots/travel_advisor.png" alt="Travel Advisor" width="450"/></td>
+    <td><img src="clinet/docs/screenshots/journey_tree.png" alt="Journey Tree" width="450"/></td>
   </tr>
 </table>
 
