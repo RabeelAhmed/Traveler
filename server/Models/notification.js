@@ -13,7 +13,7 @@ sender: {
 }, // Who triggered the event
 type: { 
     type: String, 
-    enum: ["like", "follow", "comment", "Achievement", "journey_start", "journey_step", "journey_complete"], 
+    enum: ["like", "follow", "comment", "Achievement", "Achivement", "journey_start", "journey_step", "journey_complete"], 
     required: true 
 }, // Notification type
 post: { 

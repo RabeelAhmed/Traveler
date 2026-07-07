@@ -5,9 +5,11 @@ import { AiOutlineLike, AiFillLike } from "react-icons/ai";
 import { MdOutlineModeComment } from "react-icons/md";
 import { CiLocationOn } from "react-icons/ci";
 import { BsBookmark, BsBookmarkFill } from "react-icons/bs";
+import { FiFolderPlus } from "react-icons/fi";
 import { motion } from "framer-motion";
 import ProfileImage from "./ProfileImage";
 import JourneyCard from "./JourneyCard";
+import AddToCollectionModal from "./AddToCollectionModal";
 import { likeAndUnlikePost } from "../Toolkit/slices/feedSlice";
 import { toggleLike } from "../Toolkit/slices/userProfileSlice";
 import { toggleBookmark } from "../Toolkit/slices/bookmarkSlice";
@@ -30,6 +32,7 @@ const PostCard = ({ post }) => {
   const [isLiked, setIsLiked] = useState(post?.isLikedByUser);
   const [likesCount, setLikesCount] = useState(post?.likesCount || 0);
   const [animateLike, setAnimateLike] = useState(false);
+  const [showCollectionModal, setShowCollectionModal] = useState(false);
 
   const openPost = (e) => {
     e.preventDefault();
@@ -43,6 +46,15 @@ const PostCard = ({ post }) => {
       return;
     }
     dispatch(toggleBookmark(post.id));
+  };
+
+  const handleCollectionClick = (e) => {
+    e.stopPropagation();
+    if (!isLoggedIn) {
+      navigate("/login", { state: { from: location } });
+      return;
+    }
+    setShowCollectionModal(true);
   };
 
   const handleUserProfile = (e) => {
@@ -171,6 +183,16 @@ const PostCard = ({ post }) => {
                 )}
               </div>
             </motion.button>
+
+            {/* Add to Collection button */}
+            <motion.button
+              {...springPress}
+              onClick={handleCollectionClick}
+              type="button"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-sand-200/80 bg-sand-50 hover:bg-sand-100 text-xs font-semibold tracking-tight transition-all duration-200 text-sand-500 hover:text-ocean-600"
+            >
+              <FiFolderPlus className="text-base" />
+            </motion.button>
           </div>
         </div>
 
@@ -203,6 +225,13 @@ const PostCard = ({ post }) => {
           </span>
         </div>
       </div>
+
+      {/* Add To Collection Modal Popup */}
+      <AddToCollectionModal
+        postId={post?.id}
+        isOpen={showCollectionModal}
+        onClose={() => setShowCollectionModal(false)}
+      />
     </div>
   );
 };

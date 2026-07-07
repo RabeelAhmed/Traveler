@@ -231,8 +231,8 @@ const addComment = async (req, res) => {
 
         await postOwner.save();
         const notification = new Notification({
-          recipient: post.userId._id, // Post owner
-          sender: post.userId._id,
+          recipient: post.userId, // Post owner is just post.userId
+          sender: post.userId,
           type: "Achivement",
           post: postId,
         });
@@ -261,9 +261,9 @@ const addComment = async (req, res) => {
     responsePost.comments = responsePost.comments.reverse();
     console.log(responsePost.comments);
 
-    if (!(post.userId._id.toString() === curUserId)) {
+    if (post.userId.toString() !== curUserId) {
       const notification = new Notification({
-        recipient: post.userId._id, // Post owner
+        recipient: post.userId, // Post owner
         sender: curUserId,
         type: "comment",
         post: postId,
@@ -471,7 +471,22 @@ const getTrendingDestinations = async (req, res) => {
   }
 };
 
-
+const getTrendingTags = async (req, res) => {
+  try {
+    const tags = await Post.aggregate([
+      { $unwind: '$hashtags' },
+      { $match: { hashtags: { $ne: '', $exists: true } } },
+      { $group: { _id: '$hashtags', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 15 },
+      { $project: { tag: '$_id', count: 1, _id: 0 } },
+    ]);
+    return res.send(success(200, { tags }));
+  } catch (err) {
+    console.error('getTrendingTags error:', err);
+    return res.send(error(500, 'Something went wrong'));
+  }
+};
 
 module.exports = {
   createPost,
@@ -483,4 +498,6 @@ module.exports = {
   searchAll,
   generateSignature,
   getTrendingDestinations,
+  getTrendingTags,
 };
+

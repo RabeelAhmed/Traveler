@@ -31,10 +31,12 @@ import Search from "./Pages/Search";
 import Loader from "./Components/Loader";
 import JourneyTreeView from "./Pages/JourneyTreeView";
 import TrendingDestinations from "./Pages/TrendingDestinations";
+import CollectionView from "./Pages/CollectionView";
 
 import { KEY_ACCESS_TOKEN, getItem } from './utils/LocalStorageManager'
 import { setLoggedIn} from './Toolkit/slices/appConfigSlice';
 import { prependPost } from './Toolkit/slices/feedSlice';
+import { refreshTags } from './Toolkit/slices/trendingTagsSlice';
 
 const REACT_APP_SERVER_BASE_URL = import.meta.env.VITE_SERVER_BASE_URL;
 function App() {
@@ -56,6 +58,7 @@ function App() {
     like: "liked your post! ❤️",
     comment: "commented on your post! 💬",
     follow: "followed you! 🔥",
+    Achievement: "You Got An Achievement!",
     Achivement: "You Got An Achievement!",
     journey_start: "started a new journey! 🚀",
     journey_step: "added a new step to their journey 🗺️",
@@ -107,6 +110,7 @@ function App() {
     // Real-time feed: prepend new posts from followed users instantly
     const handleNewPost = (post) => {
       dispatch(prependPost(post));
+      dispatch(refreshTags()); // reset so Sidebar re-fetches trending tags
       toast(`✨ New post in your feed!`, {
         icon: '🗺️',
         style: { fontWeight: 600, fontSize: '13px' },
@@ -147,6 +151,7 @@ function App() {
             <Route path="/search" element={<Search />} />
             <Route path="/journey/:id" element={<JourneyTreeView />} />
             <Route path="/trending" element={<TrendingDestinations />} />
+            <Route path="/collection/:id" element={<CollectionView />} />
             <Route path="/" element={<FeedLoad />}>
               <Route path="/forum" element={<Forum />} />
               

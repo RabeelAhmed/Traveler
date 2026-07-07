@@ -7,3 +7,5 @@ node_modules/
 dist/
 .git_commit_msg.tmp
 **/kaggle.json
+.codebase-memory/
+

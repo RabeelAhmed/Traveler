@@ -11,13 +11,16 @@ import {
   resetProfile,
 } from "../Toolkit/slices/userProfileSlice";
 import { getSavedPosts } from "../Toolkit/slices/bookmarkSlice";
+import { getUserCollections } from "../Toolkit/slices/collectionSlice";
 import NewPostPrompt from "../Components/NewPostPrompt";
 import PostCard from "../Components/PostCard";
+import CollectionCard from "../Components/CollectionCard";
 import Achivements from "../Components/Achivements";
 import Loader from "../Components/Loader";
 import Header from "../Components/Header";
 import PageTransition from "../Components/PageTransition";
 import VisitedMap from "../Components/VisitedMap";
+import { FiFolder } from "react-icons/fi";
 import { springPress, scaleIn, fadeUp, staggerContainer } from "../utils/motion";
 
 const CountUp = ({ target }) => {
@@ -62,11 +65,12 @@ const Profile = () => {
   const posts = useSelector((state) => state.userProfile.posts);
   const isFollowing = useSelector((state) => state.userProfile.isFollowing);
   const savedPosts = useSelector((state) => state.bookmark?.savedPosts) || [];
+  const collections = useSelector((state) => state.collection.collections) || [];
 
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const [owner, setOwner] = useState(false);
-  const [activeTab, setActiveTab] = useState("journeys"); // "journeys" | "achievements" | "saved"
+  const [activeTab, setActiveTab] = useState("journeys"); // "journeys" | "achievements" | "saved" | "collections"
 
   const postUrl = window.location.href;
 
@@ -102,6 +106,12 @@ const Profile = () => {
       dispatch(getSavedPosts());
     }
   }, [activeTab, savedPosts.length, dispatch]);
+
+  useEffect(() => {
+    if (activeTab === "collections") {
+      dispatch(getUserCollections(id));
+    }
+  }, [activeTab, id, dispatch]);
 
   const handleFollow = () => {
     dispatch(followAndUnfollowUser({ followId: id }));
@@ -297,6 +307,21 @@ const Profile = () => {
               )}
 
               <button
+                onClick={() => setActiveTab("collections")}
+                className={`relative px-6 py-3 font-display font-bold text-sm tracking-tight transition-colors duration-200 ${
+                  activeTab === "collections" ? "text-ocean-600" : "text-sand-400 hover:text-sand-700"
+                }`}
+              >
+                <span>Collections</span>
+                {activeTab === "collections" && (
+                  <motion.div
+                    layoutId="profile-tab-pill"
+                    className="absolute bottom-0 inset-x-0 h-0.5 bg-ocean-600 rounded-full"
+                  />
+                )}
+              </button>
+
+              <button
                 onClick={() => setActiveTab("achievements")}
                 className={`relative px-6 py-3 font-display font-bold text-sm tracking-tight transition-colors duration-200 ${
                   activeTab === "achievements" ? "text-ocean-600" : "text-sand-400 hover:text-sand-700"
@@ -439,6 +464,54 @@ const Profile = () => {
                       </motion.div>
                     )}
                   </motion.div>
+                </motion.div>
+              )}
+
+              {activeTab === "collections" && (
+                <motion.div
+                  key="collections"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  {collections?.length > 0 ? (
+                    <motion.div
+                      variants={staggerContainer(0.06, 0.04)}
+                      initial="hidden"
+                      animate="visible"
+                      className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6"
+                    >
+                      {collections.map((col) => (
+                        <motion.div key={col._id} variants={fadeUp}>
+                          <CollectionCard collection={col} />
+                        </motion.div>
+                      ))}
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      variants={fadeUp}
+                      className="relative overflow-hidden bg-white rounded-3xl border border-sand-100 shadow-[0_8px_30px_rgb(20,41,57,0.02)] flex flex-col items-center justify-center py-16 px-8 text-center"
+                    >
+                      {/* Decorative background circles */}
+                      <div className="absolute top-4 right-4 w-20 h-20 rounded-full bg-ocean-50/60 blur-lg" />
+                      <div className="absolute bottom-4 left-4 w-16 h-16 rounded-full bg-sand-100/80 blur-md" />
+
+                      <div className="relative z-10 flex flex-col items-center gap-4">
+                        <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-sand-50 to-sand-100/80 border border-sand-200 flex items-center justify-center shadow-md">
+                          <FiFolder className="text-3xl text-sand-400" />
+                        </div>
+                        <div>
+                          <p className="font-display font-bold text-lg text-sand-700 mb-1">No collections yet</p>
+                          <p className="text-sm text-sand-400 max-w-xs leading-relaxed">
+                            {owner
+                              ? "Organize your favorite posts into custom albums or travel categories."
+                              : "This traveler hasn't created any public collections yet."}
+                          </p>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
                 </motion.div>
               )}
 

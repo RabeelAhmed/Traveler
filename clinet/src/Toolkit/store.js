@@ -6,6 +6,8 @@ import userProfileReducer from "./slices/userProfileSlice";
 import journeyReducer from "./slices/journeySlice";
 import bookmarkReducer from "./slices/bookmarkSlice";
 import trendingReducer from "./slices/trendingSlice";
+import trendingTagsReducer from "./slices/trendingTagsSlice";
+import collectionReducer from "./slices/collectionSlice";
 export default configureStore ({
     reducer: {
         appConfig: appConfigReducer,
@@ -15,5 +17,7 @@ export default configureStore ({
         journey: journeyReducer,
         bookmark: bookmarkReducer,
         trending: trendingReducer,
+        trendingTags: trendingTagsReducer,
+        collection: collectionReducer,
     }
 })

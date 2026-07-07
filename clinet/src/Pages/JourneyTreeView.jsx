@@ -185,20 +185,24 @@ const JourneyTreeView = () => {
         />
 
         {/* Tree Header Controls & Owner Information Card */}
+        {/* Tree Header Controls & Owner Information Card */}
         <div className="max-w-4xl mx-auto px-4 sm:px-6 mt-6">
-          <div className="bg-white rounded-3xl border border-sand-200/80 shadow-[0_8px_30px_rgb(20,41,57,0.02)] p-6 flex flex-col md:flex-row items-center justify-between gap-6 text-left">
-            <div className="flex items-center gap-4">
+          <div className="bg-white rounded-[32px] border border-sand-150 shadow-[0_12px_40px_rgba(20,41,57,0.03)] p-6 flex flex-col md:flex-row items-center justify-between gap-6 text-left relative overflow-hidden">
+            {/* Soft decorative accent background glow */}
+            <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-ocean-50/30 to-orange-50/20 rounded-full blur-2xl pointer-events-none" />
+            
+            <div className="flex items-center gap-4 relative z-10">
               <img
                 src={currentJourney.owner?.profilePicture?.url || ""}
                 alt="Owner Avatar"
-                className="w-14 h-14 object-cover rounded-full border border-sand-100 p-0.5"
+                className="w-16 h-16 object-cover rounded-2xl border-2 border-ocean-100 shadow-sm p-0.5 bg-white"
               />
               <div>
-                <h2 className="font-display font-extrabold text-lg text-sand-900 leading-tight">
+                <h2 className="font-display font-extrabold text-xl text-sand-900 leading-tight">
                   {currentJourney.owner?.fullname}
                 </h2>
-                <p className="font-sans text-xs text-sand-500 mt-1 flex items-center gap-1.5">
-                  <CiCalendar className="text-sm text-ocean-500" />
+                <p className="font-sans text-xs text-sand-500 mt-1.5 flex items-center gap-1.5 font-bold">
+                  <CiCalendar className="text-sm text-ocean-600 font-extrabold" />
                   <span>
                     Started {new Date(currentJourney.startedAt).toLocaleDateString()}
                     {currentJourney.endedAt && ` — Completed ${new Date(currentJourney.endedAt).toLocaleDateString()}`}
@@ -208,14 +212,14 @@ const JourneyTreeView = () => {
             </div>
 
             {/* Badges and actions */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 relative z-10">
               {isActive ? (
-                <span className="text-[10px] font-bold text-sunset-600 bg-sunset-50 border border-sunset-100 rounded-full px-3 py-1 uppercase tracking-wider">
-                  Ongoing Journey
+                <span className="text-[10px] font-black text-orange-600 bg-orange-55 border border-orange-100/50 rounded-full px-3.5 py-1.5 uppercase tracking-wider animate-pulse">
+                  Ongoing Journey 🗺️
                 </span>
               ) : (
-                <span className="text-[10px] font-bold text-jade-600 bg-jade-50 border border-jade-100 rounded-full px-3 py-1 uppercase tracking-wider flex items-center gap-1">
-                  <FaFlagCheckered /> Completed Journey
+                <span className="text-[10px] font-black text-jade-700 bg-jade-50 border border-jade-100 rounded-full px-3.5 py-1.5 uppercase tracking-wider flex items-center gap-1.5 shadow-sm shadow-jade-50">
+                  <FaFlagCheckered className="text-jade-600" /> Completed Journey 🏁
                 </span>
               )}
 
@@ -223,16 +227,18 @@ const JourneyTreeView = () => {
               {isOwner && isActive && (
                 <div className="flex gap-2">
                   <motion.button
-                    {...springPress}
+                    whileHover={{ scale: 1.05, y: -1 }}
+                    whileTap={{ scale: 0.95 }}
                     onClick={() => setShowAddStepModal(true)}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-ocean-600 hover:bg-ocean-700 shadow-md shadow-ocean-500/10 focus:outline-none"
+                    className="flex items-center gap-1.5 px-4.5 py-2.5 rounded-2xl text-xs font-black text-white bg-gradient-to-r from-ocean-600 to-ocean-500 hover:from-ocean-700 hover:to-ocean-600 shadow-md shadow-ocean-500/20 focus:outline-none transition-all duration-300"
                   >
-                    <FiPlus /> Add Step
+                    <FiPlus className="stroke-[3]" /> Add Step
                   </motion.button>
                   <motion.button
-                    {...springPress}
+                    whileHover={{ scale: 1.05, y: -1 }}
+                    whileTap={{ scale: 0.95 }}
                     onClick={handleEndJourney}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-sunset-500 hover:bg-sunset-600 shadow-md shadow-sunset-500/10 focus:outline-none"
+                    className="flex items-center gap-1.5 px-4.5 py-2.5 rounded-2xl text-xs font-black text-white bg-gradient-to-r from-sunset-500 to-sunset-400 hover:from-sunset-600 hover:to-sunset-500 shadow-md shadow-sunset-500/20 focus:outline-none transition-all duration-300"
                   >
                     End Journey
                   </motion.button>
@@ -246,8 +252,8 @@ const JourneyTreeView = () => {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 mt-16 relative">
           
           {/* Vertical connecting line */}
-          <div className="absolute left-1/2 top-4 bottom-4 w-0.5 bg-gradient-to-b from-ocean-500/30 via-ocean-500/50 to-ocean-500/20 -translate-x-1/2 z-0 hidden md:block" />
-          <div className="absolute left-6 top-4 bottom-4 w-0.5 bg-gradient-to-b from-ocean-500/30 via-ocean-500/50 to-ocean-500/20 z-0 block md:hidden" />
+          <div className="absolute left-6 md:left-1/2 top-4 bottom-4 w-1 bg-gradient-to-b from-ocean-500 via-orange-400 to-jade-500 opacity-60 rounded-full -translate-x-1/2 z-0 hidden md:block" />
+          <div className="absolute left-6 top-4 bottom-4 w-1 bg-gradient-to-b from-ocean-500 via-orange-400 to-jade-500 opacity-60 rounded-full z-0 block md:hidden" />
 
           {/* Node items */}
           <motion.div

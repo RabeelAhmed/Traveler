@@ -1,5 +1,5 @@
 const router = require('express').Router()
-const {createPost,likeAndUnlikePost,addComment,deleteComment,deletePost,getPost,searchAll, generateSignature, getTrendingDestinations} = require('../Controllers/postController')
+const {createPost,likeAndUnlikePost,addComment,deleteComment,deletePost,getPost,searchAll, generateSignature, getTrendingDestinations, getTrendingTags} = require('../Controllers/postController')
 const {verifyAuthToken} = require('../Middleware/jwtAuthMiddleware')
 const { multipleUpload } = require('../Middleware/uploads');
 const {optionalAuthToken} = require('../Middleware/jwtAuthMiddleware')
@@ -12,6 +12,8 @@ router.post('/deletecomment',verifyAuthToken,deleteComment);
 router.post('/deletepost',verifyAuthToken,deletePost);
 router.get("/search",verifyAuthToken, searchAll);
 router.get('/trending-destinations', verifyAuthToken, getTrendingDestinations);
+router.get('/trending-tags', verifyAuthToken, getTrendingTags);
 router.get('/:_id',optionalAuthToken,getPost)
 
-module.exports = router ;
+module.exports = router ;
+

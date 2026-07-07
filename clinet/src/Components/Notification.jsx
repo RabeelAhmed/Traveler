@@ -16,6 +16,7 @@ const Notifications = ({ notifications = [] }) => {
     like: "liked your post! ❤️",
     comment: "commented on your post! 💬",
     follow: "followed you! 🔥",
+    Achievement: "earned an achievement milestone!",
     Achivement: "earned an achievement milestone!",
     journey_start: "started a new journey! 🚀",
     journey_step: "added a new step to their journey 🗺️",
@@ -26,6 +27,7 @@ const Notifications = ({ notifications = [] }) => {
     follow: "bg-ocean-500 text-white",
     like: "bg-sunset-500 text-white",
     comment: "bg-sand-600 text-white",
+    Achievement: "bg-jade-500 text-white",
     Achivement: "bg-jade-500 text-white",
     journey_start: "bg-sunset-500 text-white",
     journey_step: "bg-ocean-500 text-white",
@@ -46,6 +48,7 @@ const Notifications = ({ notifications = [] }) => {
         return <MdOutlineRoute className="text-[9px]" />;
       case "journey_complete":
         return <MdOutlineFlag className="text-[9px]" />;
+      case "Achievement":
       case "Achivement":
       default:
         return <FaTrophy className="text-[9px]" />;
@@ -92,7 +95,7 @@ const Notifications = ({ notifications = [] }) => {
     if (items.length === 0) return null;
     return (
       <div className="space-y-3">
-        <h4 className="font-display font-bold text-[10px] text-sand-400 uppercase tracking-widest pl-1">
+        <h4 className="font-display font-black text-[10px] text-sand-400 uppercase tracking-widest pl-2">
           {title}
         </h4>
         <motion.div
@@ -104,52 +107,70 @@ const Notifications = ({ notifications = [] }) => {
           {items.map((notif, idx) => {
             const isUnread = notif.isRead === false || notif.read === false;
             const target = getNotifTarget(notif);
+
+            // Determine left accent border based on notification type
+            const accentColors = {
+              follow: "border-l-ocean-500",
+              like: "border-l-sunset-500",
+              comment: "border-l-sand-500",
+              Achivement: "border-l-jade-500",
+              journey_start: "border-l-amber-500",
+              journey_step: "border-l-ocean-400",
+              journey_complete: "border-l-jade-500",
+            };
+            const leftBorderColor = accentColors[notif.type] || "border-l-sand-300";
+
             return (
               <motion.div
                 key={notif._id || idx}
                 variants={fadeUp}
+                whileHover={{ y: -2, scale: 1.01 }}
                 onClick={() => target && navigate(target)}
-                className={`flex items-center gap-4 p-4 bg-white rounded-2xl border border-sand-100/80 hover:bg-sand-50/50 shadow-[0_8px_30px_rgb(20,41,57,0.01)] transition-colors duration-300 ${
-                  target ? 'cursor-pointer hover:border-ocean-100' : 'cursor-default'
-                }`}
+                className={`group flex items-center gap-4 p-4 rounded-3xl border-y border-r border-l-[4px] ${leftBorderColor} transition-all duration-300 ${
+                  isUnread
+                    ? "bg-ocean-50/30 border-ocean-100/50 shadow-[0_8px_30px_rgba(65,120,159,0.06)]"
+                    : "bg-white border-sand-100/80 shadow-[0_8px_30px_rgb(20,41,57,0.01)]"
+                } ${target ? "cursor-pointer hover:border-ocean-100 hover:shadow-[0_12px_40px_rgba(65,120,159,0.08)]" : "cursor-default"}`}
               >
                 {/* Profile Image with corner indicator badge */}
                 <div className="relative flex-shrink-0">
-                  <div className="border border-sand-100 rounded-full p-0.5">
+                  <div className="border border-sand-100 rounded-full p-0.5 bg-white shadow-sm">
                     <ProfileImage
                       userProfileImage={notif?.sender?.profilePicture?.url}
                       userId={notif?.sender?._id}
                     />
                   </div>
-                  <div
-                    className={`absolute -bottom-0.5 -right-0.5 w-4.5 h-4.5 rounded-full flex items-center justify-center border-2 border-white shadow-sm ${
+                  <motion.div
+                    whileHover={{ scale: 1.2 }}
+                    className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center border-2 border-white shadow-md transition-transform duration-300 ${
                       badgeColors[notif.type] || "bg-sand-400 text-white"
                     }`}
                   >
                     <BadgeIcon type={notif.type} />
-                  </div>
+                  </motion.div>
                 </div>
 
                 {/* Text details */}
                 <div className="flex-1 min-w-0">
-                  <p className="text-sand-800 text-xs md:text-sm leading-relaxed">
-                    <span className={`font-sans font-bold text-sand-900 ${isUnread ? "font-extrabold" : ""}`}>
+                  <p className="text-sand-800 text-xs md:text-sm leading-relaxed font-sans">
+                    <span className={`font-bold text-sand-900 group-hover:text-ocean-600 transition-colors ${isUnread ? "font-extrabold" : ""}`}>
                       {notif?.sender?.username || "System"}
                     </span>{" "}
-                    <span className="font-sans text-sand-650">
+                    <span className={`${isUnread ? "text-sand-800 font-semibold" : "text-sand-600"}`}>
                       {notificationMessages[notif.type] || "performed an action!"}
                     </span>
                   </p>
-                  <p className="text-[10px] font-sans text-sand-400 mt-1">
-                    {formatDistanceToNow(new Date(notif.createdAt))} ago
+                  <p className="text-[10px] font-bold text-sand-400 mt-1 uppercase tracking-wider flex items-center gap-1.5">
+                    <span>•</span>
+                    <span>{formatDistanceToNow(new Date(notif.createdAt))} ago</span>
                   </p>
                 </div>
 
                 {/* Pulsing jade dot for unread entries */}
                 {isUnread && (
-                  <div className="relative flex h-2 w-2 mr-2">
+                  <div className="relative flex h-2.5 w-2.5 mr-2">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-jade-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-jade-500"></span>
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-jade-500 shadow-sm shadow-jade-300"></span>
                   </div>
                 )}
               </motion.div>
@@ -178,16 +199,33 @@ const Notifications = ({ notifications = [] }) => {
               {renderNotificationGroup("Earlier", groups.earlier)}
             </div>
           ) : (
-            /* bell-off empty notification panel */
-            <div className="flex flex-col items-center justify-center py-20 text-center max-w-sm mx-auto">
-              <FaBellSlash className="text-sand-300 text-6xl mb-4 animate-pulse" />
-              <h3 className="font-display font-semibold text-lg text-sand-800 mb-1.5">
-                All caught up!
-              </h3>
-              <p className="font-sans text-xs text-sand-400 leading-relaxed">
-                No new notifications available right now. Check back later when people interact with your journey posts!
-              </p>
-            </div>
+            /* Premium Empty Notification Panel */
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="relative overflow-hidden bg-white rounded-3xl border border-sand-150 shadow-[0_8px_30px_rgb(20,41,57,0.02)] flex flex-col items-center justify-center py-20 px-8 text-center max-w-md mx-auto"
+            >
+              {/* Subtle background glow */}
+              <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-ocean-50/40 blur-2xl -translate-y-1/2" />
+              <div className="absolute bottom-0 left-0 w-32 h-32 rounded-full bg-sand-100/50 blur-xl translate-y-1/2" />
+              
+              <div className="relative z-10 flex flex-col items-center gap-4">
+                <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-ocean-50 to-sand-100/80 border border-ocean-100 flex items-center justify-center shadow-lg relative">
+                  <FaBellSlash className="text-sand-400 text-3xl animate-pulse" />
+                  <div className="absolute -top-1 -right-1 w-4.5 h-4.5 rounded-full bg-orange-400 text-white text-[9px] font-black flex items-center justify-center animate-bounce">
+                    ✓
+                  </div>
+                </div>
+                <div>
+                  <h3 className="font-display font-extrabold text-base text-sand-800">
+                    All caught up!
+                  </h3>
+                  <p className="font-sans text-xs text-sand-400 mt-2 max-w-xs leading-relaxed">
+                    No new notifications available right now. Check back later when people interact with your journey posts!
+                  </p>
+                </div>
+              </div>
+            </motion.div>
           )}
         </div>
       </div>
