@@ -1,6 +1,12 @@
 const Notification = require('./Models/notification');
 let ioInstance;
 let onlineUsers = new Map();
+// Reverse lookup: find userId from socket.id
+const getUserIdBySocketId = (socketId) => {
+    for (const [uid, sid] of onlineUsers) { if (sid === socketId) return uid; }
+    return null;
+};
+
 const initsocket = (io) => {
     ioInstance = io;
     io.on('connection',(socket)=>{
@@ -18,6 +24,32 @@ const initsocket = (io) => {
             }
             console.log('User disconnected:', socket.id);
         })
+
+        // Direct Messaging Events
+        socket.on('sendMessage', ({ recipientId, message }) => {
+            if (!recipientId) return;
+            const recipientSocketId = onlineUsers.get(recipientId.toString());
+            if (recipientSocketId) {
+                ioInstance.to(recipientSocketId).emit('newMessage', message);
+            }
+        });
+
+        socket.on('typing', ({ conversationId, recipientId }) => {
+            if (!recipientId) return;
+            const recipientSocketId = onlineUsers.get(recipientId.toString());
+            const senderId = getUserIdBySocketId(socket.id);
+            if (recipientSocketId) {
+                ioInstance.to(recipientSocketId).emit('typing', { conversationId, senderId });
+            }
+        });
+
+        socket.on('stopTyping', ({ conversationId, recipientId }) => {
+            if (!recipientId) return;
+            const recipientSocketId = onlineUsers.get(recipientId.toString());
+            if (recipientSocketId) {
+                ioInstance.to(recipientSocketId).emit('stopTyping', { conversationId });
+            }
+        });
     })
 }
 
