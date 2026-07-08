@@ -99,10 +99,20 @@ const messageSlice = createSlice({
       const convIndex = state.conversations.findIndex((c) => c._id === conversationId);
       if (convIndex !== -1) {
         const conv = state.conversations[convIndex];
-        if (conv.lastMessage && !conv.lastMessage.isRead && conv.lastMessage.sender !== state.activeConversation?.participants?.find(p => p._id === conv.lastMessage.sender)?._id) {
+        if (conv.lastMessage) {
           conv.lastMessage.isRead = true;
         }
       }
+      
+      // Update matching loaded messages to be marked as read
+      state.messages = state.messages.map((m) => {
+        const mConvId = m.conversationId?._id || m.conversationId;
+        if (mConvId?.toString() === conversationId?.toString()) {
+          return { ...m, isRead: true };
+        }
+        return m;
+      });
+
       // Re-calculate global unread count
       state.unreadCount = state.conversations.reduce((acc, conv) => {
         const hasUnread = conv.lastMessage && !conv.lastMessage.isRead;

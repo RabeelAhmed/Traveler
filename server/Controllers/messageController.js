@@ -1,6 +1,7 @@
 const Conversation = require('../Models/conversation');
 const Message = require('../Models/message');
 const { success, error } = require('../Utils/responseWrapper');
+const { emitMessagesRead } = require('../socket');
 
 // POST /message/conversation
 const getOrCreateConversation = async (req, res) => {
@@ -95,6 +96,14 @@ const getMessages = async (req, res) => {
       { conversationId, sender: { $ne: curUserId }, isRead: false },
       { $set: { isRead: true } }
     );
+
+    // Call emitMessagesRead for the other participant
+    const otherUserId = conversation.participants.find(
+      (p) => p.toString() !== curUserId
+    );
+    if (otherUserId) {
+      emitMessagesRead(otherUserId, conversationId);
+    }
 
     return res.send(success(200, { messages }));
   } catch (err) {

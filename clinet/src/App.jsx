@@ -39,7 +39,7 @@ import { setLoggedIn} from './Toolkit/slices/appConfigSlice';
 import { prependPost } from './Toolkit/slices/feedSlice';
 import { refreshTags } from './Toolkit/slices/trendingTagsSlice';
 import { useSocket } from "./context/SocketContext";
-import { receiveMessage } from "./Toolkit/slices/messageSlice";
+import { receiveMessage, markConversationRead } from "./Toolkit/slices/messageSlice";
 
 const REACT_APP_SERVER_BASE_URL = import.meta.env.VITE_SERVER_BASE_URL;
 function App() {
@@ -123,14 +123,20 @@ function App() {
       dispatch(receiveMessage(message));
     };
 
+    const handleMessagesRead = ({ conversationId }) => {
+      dispatch(markConversationRead(conversationId));
+    };
+
     socket.on("newNotification", handleNewNotification);
     socket.on("newPost", handleNewPost);
     socket.on("newMessage", handleNewMessage);
+    socket.on("messagesRead", handleMessagesRead);
 
     return () => {
       socket.off("newNotification", handleNewNotification);
       socket.off("newPost", handleNewPost);
       socket.off("newMessage", handleNewMessage);
+      socket.off("messagesRead", handleMessagesRead);
     };
   }, [socket, userId, dispatch]);
 

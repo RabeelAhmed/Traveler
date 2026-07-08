@@ -93,4 +93,9 @@ const broadcastNewPost = (followerIds, mappedPost) => {
     }
 };
 
-module.exports = {initsocket, notify, broadcastNewPost}
+const emitMessagesRead = (senderUserId, conversationId) => {
+    const senderSocketId = onlineUsers.get(senderUserId.toString());
+    if (senderSocketId) ioInstance.to(senderSocketId).emit('messagesRead', { conversationId });
+}
+
+module.exports = {initsocket, notify, broadcastNewPost, emitMessagesRead}

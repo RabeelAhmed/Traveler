@@ -2,10 +2,12 @@ import React, { useEffect, useState, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { motion, AnimatePresence } from "framer-motion";
 import { FiSend, FiMessageSquare, FiInfo, FiChevronLeft } from "react-icons/fi";
-import { formatDistanceToNow } from "date-fns";
+import { Link } from "react-router-dom";
+import { formatDistanceToNow, isToday, isYesterday, format } from "date-fns";
 
 import { getConversations, getMessages, sendMessage, setActiveConversation, markConversationRead } from "../Toolkit/slices/messageSlice";
 import { useSocket } from "../context/SocketContext";
+import { axiosClient } from "../utils/axiosClient";
 import ProfileImage from "../Components/ProfileImage";
 import Header from "../Components/Header";
 import PageTransition from "../Components/PageTransition";
@@ -21,10 +23,47 @@ const Messages = () => {
   const { conversations, activeConversation, messages, status } = useSelector((state) => state.message);
 
   const [text, setText] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [isOtherTyping, setIsOtherTyping] = useState(false);
   const [mobileView, setMobileView] = useState("list"); // "list" | "chat"
 
   const messagesEndRef = useRef(null);
+
+  // Client-side search filtering of conversations
+  const filteredConversations = conversations.filter((conv) => {
+    const otherUser = conv.participants.find((p) => p._id !== curUserId);
+    if (!otherUser) return false;
+    const query = searchQuery.toLowerCase();
+    return (
+      otherUser.fullname?.toLowerCase().includes(query) ||
+      otherUser.username?.toLowerCase().includes(query)
+    );
+  });
+
+  // Group messages helper for centered date dividers
+  const getGroupedMessages = () => {
+    const groups = [];
+    let lastDateStr = null;
+
+    messages.forEach((msg) => {
+      const msgDate = new Date(msg.createdAt);
+      let dateStr = "";
+      if (isToday(msgDate)) {
+        dateStr = "Today";
+      } else if (isYesterday(msgDate)) {
+        dateStr = "Yesterday";
+      } else {
+        dateStr = format(msgDate, "MMM d, yyyy");
+      }
+
+      if (dateStr !== lastDateStr) {
+        groups.push({ type: "date-divider", label: dateStr, id: `divider-${msg._id}` });
+        lastDateStr = dateStr;
+      }
+      groups.push({ type: "message", data: msg, id: msg._id });
+    });
+    return groups;
+  };
   const typingTimeoutRef = useRef(null);
 
   // Load conversations on mount
@@ -93,7 +132,22 @@ const Messages = () => {
 
   const selectConversation = (conv) => {
     dispatch(setActiveConversation(conv));
+    setMobileView("chat");
   };
+
+  // Mark new incoming messages as read in real-time if we are currently viewing the conversation
+  useEffect(() => {
+    if (activeConversation?._id && messages.length > 0) {
+      const lastMsg = messages[messages.length - 1];
+      const isOtherUserSender = lastMsg.sender?._id !== curUserId && lastMsg.sender !== curUserId;
+      if (isOtherUserSender && !lastMsg.isRead) {
+        // Call the GET messages endpoint to mark as read in backend
+        axiosClient.get(`/message/${activeConversation._id}`);
+        // Dispatch local mark read
+        dispatch(markConversationRead(activeConversation._id));
+      }
+    }
+  }, [messages.length, activeConversation?._id, curUserId, dispatch]);
 
   const handleSend = async (e) => {
     e.preventDefault();
@@ -141,7 +195,7 @@ const Messages = () => {
 
   return (
     <PageTransition>
-      <div className="bg-sand-50 h-screen overflow-hidden pt-20 pb-24 md:pb-6 flex flex-col">
+      <div className="bg-sand-50 h-[100dvh] overflow-hidden pt-20 pb-24 md:pb-6 flex flex-col" style={{ height: '100dvh' }}>
         <Header
           title="Direct Messages"
           subtitle="Chat with other travelers and coordinate journeys in real time."
@@ -154,19 +208,42 @@ const Messages = () => {
           }`}>
             <h3 className="font-display font-extrabold text-sm text-sand-800 mb-4 px-2">Conversations</h3>
             
+            {/* Search Input */}
+            <div className="relative mb-3 px-2">
+              <input
+                type="text"
+                placeholder="Search conversations..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-8 pr-7 py-2 bg-sand-50 border border-sand-200 rounded-xl text-[11px] focus:outline-none focus:ring-2 focus:ring-ocean-300 focus:bg-white text-sand-800 placeholder:text-sand-400 transition-all font-semibold"
+              />
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sand-400 text-xs select-none">
+                🔍
+              </span>
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-4.5 top-1/2 -translate-y-1/2 text-sand-400 hover:text-sand-600 font-bold text-xs p-1"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+            
             <div className="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
               {status === "loading" && conversations.length === 0 ? (
                 Array.from({ length: 4 }).map((_, i) => (
                   <div key={i} className="h-16 bg-sand-100/50 rounded-2xl animate-pulse" />
                 ))
-              ) : conversations.length > 0 ? (
+              ) : filteredConversations.length > 0 ? (
                 <motion.div
                   variants={staggerContainer(0.05, 0.03)}
                   initial="hidden"
                   animate="visible"
                   className="space-y-2"
                 >
-                  {conversations.map((conv) => {
+                  {filteredConversations.map((conv) => {
                     const otherUser = conv.participants.find((p) => p._id !== curUserId);
                     if (!otherUser) return null;
 
@@ -210,7 +287,9 @@ const Messages = () => {
                         </div>
 
                         {isUnread && (
-                          <div className="w-2 h-2 rounded-full bg-jade-500 flex-shrink-0 animate-pulse shadow-sm shadow-jade-300" />
+                          <span className="bg-ocean-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full flex-shrink-0 shadow-sm animate-pulse whitespace-nowrap">
+                            NEW
+                          </span>
                         )}
                       </motion.div>
                     );
@@ -219,9 +298,13 @@ const Messages = () => {
               ) : (
                 <div className="flex flex-col items-center justify-center py-16 text-center">
                   <FiMessageSquare className="text-sand-300 text-3xl mb-2" />
-                  <p className="text-xs font-bold text-sand-500">No chats started yet</p>
+                  <p className="text-xs font-bold text-sand-500">
+                    {searchQuery ? "No matches found" : "No chats started yet"}
+                  </p>
                   <p className="text-[10px] text-sand-400 mt-1 max-w-[180px] leading-relaxed">
-                    Visit another traveler's profile page and hit the Message button to start chatting.
+                    {searchQuery
+                      ? "Try searching for another fullname or username."
+                      : "Visit another traveler's profile page and hit the Message button to start chatting."}
                   </p>
                 </div>
               )}
@@ -285,12 +368,28 @@ const Messages = () => {
                       );
                     })
                   ) : messages.length > 0 ? (
-                    messages.map((msg) => {
+                    getGroupedMessages().map((item) => {
+                      if (item.type === "date-divider") {
+                        return (
+                          <div key={item.id} className="relative flex items-center justify-center my-5 w-full flex-shrink-0">
+                            <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                              <div className="w-full border-t border-sand-200"></div>
+                            </div>
+                            <div className="relative flex justify-center">
+                              <span className="bg-white px-2.5 text-[9px] font-black text-sand-400 uppercase tracking-widest relative z-10">
+                                {item.label}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      const msg = item.data;
                       const isMe = msg.sender?._id === curUserId || msg.sender === curUserId;
                       return (
                         <div
                           key={msg._id}
-                          className={`flex flex-col max-w-[75%] ${isMe ? "self-end items-end" : "self-start items-start"}`}
+                          className={`flex flex-col max-w-[75%] ${isMe ? "self-end items-end" : "self-start items-start"} my-1`}
                         >
                           <div
                             className={`px-4 py-2.5 text-xs md:text-sm font-medium leading-relaxed ${
@@ -301,8 +400,17 @@ const Messages = () => {
                           >
                             {msg.text}
                           </div>
-                          <span className="text-[9px] font-bold text-sand-400 mt-1 px-1.5">
+                          <span className="text-[9px] font-bold text-sand-400 mt-1 px-1.5 flex items-center gap-1.5">
                             {formatDistanceToNow(new Date(msg.createdAt), { addSuffix: true })}
+                            {isMe && (
+                              <span className="inline-flex items-center">
+                                {msg.isRead ? (
+                                  <span className="text-jade-500 font-extrabold text-[10px]" title="Read">✓✓</span>
+                                ) : (
+                                  <span className="text-sand-300 font-extrabold text-[10px]" title="Sent">✓</span>
+                                )}
+                              </span>
+                            )}
                           </span>
                         </div>
                       );
@@ -366,6 +474,34 @@ const Messages = () => {
                   </motion.button>
                 </form>
               </>
+            ) : conversations.length === 0 ? (
+              /* Empty Inbox Onboarding State */
+              <motion.div
+                variants={fadeUp}
+                initial="hidden"
+                animate="visible"
+                className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-sand-50/10"
+              >
+                <div className="w-20 h-20 rounded-full bg-sand-100/50 border border-sand-200 flex items-center justify-center mb-6">
+                  <FiMessageSquare className="text-sand-300 text-3xl" />
+                </div>
+                
+                <h3 className="font-display font-extrabold text-lg text-sand-700">
+                  No messages yet
+                </h3>
+                <p className="font-sans text-xs text-sand-400 mt-2 max-w-xs leading-relaxed">
+                  Start conversations with other travelers to share tips and coordinate journeys.
+                </p>
+                
+                <Link to="/search">
+                  <motion.button
+                    {...springPress}
+                    className="mt-6 px-6 py-3 rounded-2xl bg-gradient-to-r from-ocean-600 to-ocean-500 hover:from-ocean-700 hover:to-ocean-600 text-xs font-black text-white shadow-md shadow-ocean-500/20 transition-all duration-300 cursor-pointer"
+                  >
+                    Find people to message
+                  </motion.button>
+                </Link>
+              </motion.div>
             ) : (
               /* No Active Chat Selected Screen */
               <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-sand-50/10">
