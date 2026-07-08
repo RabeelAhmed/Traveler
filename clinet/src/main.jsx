@@ -7,13 +7,16 @@ import { Provider } from 'react-redux'
 import { BrowserRouter } from "react-router-dom";
 import store from './Toolkit/store.js';
 import { Toaster } from "react-hot-toast";
+import { SocketProvider } from "./context/SocketContext";
 
 createRoot(document.getElementById('root')).render(
   
   <BrowserRouter>
   <Provider store={store} >
   <Toaster position="top-center" reverseOrder={false} />
-    <App />
+    <SocketProvider>
+      <App />
+    </SocketProvider>
     </Provider>
   </BrowserRouter>
 );

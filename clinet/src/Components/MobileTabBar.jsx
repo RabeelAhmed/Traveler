@@ -11,12 +11,15 @@ import {
   HiOutlineChat,
   HiChat,
   HiPlus,
+  HiOutlineMail,
+  HiMail,
 } from "react-icons/hi";
 
 const MobileTabBar = () => {
   const location = useLocation();
   const isLoggedIn = useSelector((state) => state.appConfig.isLoggedIn);
   const myProfile = useSelector((state) => state.appConfig.myProfile);
+  const unreadCount = useSelector((state) => state.message?.unreadCount) || 0;
   const userId = myProfile?._id;
 
   if (!isLoggedIn) return null;
@@ -44,6 +47,13 @@ const MobileTabBar = () => {
       label: "Forum",
       outlineIcon: HiOutlineChat,
       solidIcon: HiChat,
+    },
+    {
+      path: "/messages",
+      label: "Messages",
+      outlineIcon: HiOutlineMail,
+      solidIcon: HiMail,
+      badge: unreadCount,
     },
     {
       path: `/profile/${userId}`,
@@ -88,21 +98,30 @@ const MobileTabBar = () => {
                 to={tab.path}
                 className="flex flex-col items-center justify-center relative w-full h-full"
               >
-                {tab.isProfile ? (
-                  <img
-                    src={myProfile?.profilePicture?.url || ""}
-                    alt="User"
-                    className={`w-7 h-7 object-cover rounded-full border-2 transition-all duration-300 ${
-                      isActive ? "border-ocean-600 scale-105" : "border-sand-300"
-                    }`}
-                  />
-                ) : (
-                  <IconComponent
-                    className={`text-2xl transition-all duration-300 ${
-                      isActive ? "text-ocean-600 scale-105" : "text-sand-400 hover:text-sand-600"
-                    }`}
-                  />
-                )}
+                <div className="relative">
+                  {tab.isProfile ? (
+                    <img
+                      src={myProfile?.profilePicture?.url || ""}
+                      alt="User"
+                      className={`w-7 h-7 object-cover rounded-full border-2 transition-all duration-300 ${
+                        isActive ? "border-ocean-600 scale-105" : "border-sand-300"
+                      }`}
+                    />
+                  ) : (
+                    <IconComponent
+                      className={`text-2xl transition-all duration-300 ${
+                        isActive ? "text-ocean-600 scale-105" : "text-sand-400 hover:text-sand-600"
+                      }`}
+                    />
+                  )}
+
+                  {tab.badge > 0 && (
+                    <div className="absolute -top-1.5 -right-2 bg-sunset-500 text-white font-sans text-[8px] font-black w-4.5 h-4.5 rounded-full flex items-center justify-center border-2 border-white shadow-md">
+                      {tab.badge}
+                    </div>
+                  )}
+                </div>
+
                 <span
                   className={`text-[10px] mt-1 font-sans font-semibold tracking-tight transition-colors duration-300 ${
                     isActive ? "text-ocean-600" : "text-sand-500"

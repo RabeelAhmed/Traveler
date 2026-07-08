@@ -12,6 +12,7 @@ import {
 } from "../Toolkit/slices/userProfileSlice";
 import { getSavedPosts } from "../Toolkit/slices/bookmarkSlice";
 import { getUserCollections } from "../Toolkit/slices/collectionSlice";
+import { getOrCreateConversation } from "../Toolkit/slices/messageSlice";
 import NewPostPrompt from "../Components/NewPostPrompt";
 import PostCard from "../Components/PostCard";
 import CollectionCard from "../Components/CollectionCard";
@@ -117,6 +118,12 @@ const Profile = () => {
     dispatch(followAndUnfollowUser({ followId: id }));
   };
 
+  const handleMessageClick = () => {
+    dispatch(getOrCreateConversation(id)).then(() => {
+      navigate("/messages");
+    });
+  };
+
   const handleFacebookShare = () => {
     const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(postUrl)}`;
     window.open(facebookUrl, "_blank", "width=600,height=400");
@@ -186,17 +193,27 @@ const Profile = () => {
                   <span>Edit Profile</span>
                 </motion.button>
               ) : (
-                <motion.button
-                  {...springPress}
-                  onClick={handleFollow}
-                  className={`px-6 py-2.5 text-xs font-bold text-white rounded-xl shadow-md transition-all ${
-                    isFollowing
-                      ? "bg-sand-400 hover:bg-sand-500"
-                      : "bg-ocean-600 hover:bg-ocean-700"
-                  }`}
-                >
-                  {isFollowing ? "Unfollow" : "Follow"}
-                </motion.button>
+                <div className="flex gap-2">
+                  <motion.button
+                    {...springPress}
+                    onClick={handleFollow}
+                    className={`px-6 py-2.5 text-xs font-bold text-white rounded-xl shadow-md transition-all ${
+                      isFollowing
+                        ? "bg-sand-400 hover:bg-sand-500"
+                        : "bg-ocean-600 hover:bg-ocean-700"
+                    }`}
+                  >
+                    {isFollowing ? "Unfollow" : "Follow"}
+                  </motion.button>
+                  
+                  <motion.button
+                    {...springPress}
+                    onClick={handleMessageClick}
+                    className="px-6 py-2.5 text-xs font-bold text-ocean-600 bg-white border-2 border-ocean-600 rounded-xl hover:bg-ocean-50/50 transition-all shadow-sm"
+                  >
+                    Message
+                  </motion.button>
+                </div>
               )}
 
               {/* Ko-Fi and Share */}

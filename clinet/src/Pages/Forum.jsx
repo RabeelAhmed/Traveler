@@ -53,6 +53,11 @@ const Forum = () => {
 
           {/* Center editorial feed */}
           <div className="min-h-screen">
+            {/* Left rail top bar (Mobile only) */}
+            <div className="block md:hidden mb-6">
+              <LeftRail active={active} setActive={setActive} />
+            </div>
+
             {feedStatus === "loading" ? (
               <div className="space-y-4">
                 <PostCardSkeleton />

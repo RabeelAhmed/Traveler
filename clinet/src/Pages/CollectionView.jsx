@@ -244,7 +244,7 @@ const CollectionView = () => {
                 variants={staggerContainer(0.08, 0.05)}
                 initial="hidden"
                 animate="visible"
-                className="grid grid-cols-1 sm:grid-cols-2 gap-6"
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
               >
                 {activeCollection.posts.map((post) => (
                   <motion.div key={post.id || post._id} variants={fadeUp}>

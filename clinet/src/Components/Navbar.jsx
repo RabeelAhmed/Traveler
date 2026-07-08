@@ -7,6 +7,7 @@ import Logo from "../assets/Images/traveler_logo_animated.gif";
 import MobileTabBar from "./MobileTabBar";
 import { removeItem, KEY_ACCESS_TOKEN } from "../utils/LocalStorageManager";
 import { scaleIn, springPress } from "../utils/motion";
+import { FiBell } from "react-icons/fi";
 
 const Navbar = () => {
   const navigate = useNavigate();
@@ -16,18 +17,28 @@ const Navbar = () => {
   const userId = myProfile?._id;
 
   const [isSubMenuOpen, setIsSubMenuOpen] = useState(false);
+  const [isMobileSubMenuOpen, setIsMobileSubMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const subMenuRef = useRef(null);
+  const mobileSubMenuRef = useRef(null);
 
   const toggleSubMenu = (e) => {
     e.stopPropagation();
     setIsSubMenuOpen((prev) => !prev);
   };
 
+  const toggleMobileSubMenu = (e) => {
+    e.stopPropagation();
+    setIsMobileSubMenuOpen((prev) => !prev);
+  };
+
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (subMenuRef.current && !subMenuRef.current.contains(event.target)) {
         setIsSubMenuOpen(false);
+      }
+      if (mobileSubMenuRef.current && !mobileSubMenuRef.current.contains(event.target)) {
+        setIsMobileSubMenuOpen(false);
       }
     };
     document.addEventListener("click", handleClickOutside);
@@ -37,6 +48,7 @@ const Navbar = () => {
   const location = useLocation();
   useEffect(() => {
     setIsSubMenuOpen(false);
+    setIsMobileSubMenuOpen(false);
   }, [location.pathname]);
 
   useEffect(() => {
@@ -98,6 +110,72 @@ const Navbar = () => {
             <img src={Logo} alt="Traveler Logo" className="h-full object-contain" />
           </motion.div>
         </Link>
+
+        {/* Mobile Actions (Visible only on mobile/tablet viewports) */}
+        {isLoggedIn && (
+          <div className="flex md:hidden items-center gap-3.5 relative">
+            {/* Profile Dropdown */}
+            <div className="relative" ref={mobileSubMenuRef}>
+              <motion.button
+                {...springPress}
+                onClick={toggleMobileSubMenu}
+                className="focus:outline-none block"
+              >
+                <img
+                  src={myProfile?.profilePicture?.url || ""}
+                  alt="User"
+                  className="w-8 h-8 object-cover rounded-full border border-sand-200/80"
+                />
+              </motion.button>
+              <AnimatePresence>
+                {isMobileSubMenuOpen && (
+                  <motion.ul
+                    variants={scaleIn}
+                    initial="hidden"
+                    animate="visible"
+                    exit="hidden"
+                    className="absolute right-0 mt-3 w-40 bg-white border border-sand-200/80 text-sand-800 rounded-2xl shadow-lg p-2 z-50 origin-top-right text-left"
+                  >
+                    <motion.li {...springPress} className="rounded-xl overflow-hidden mb-0.5">
+                      <Link
+                        to={`/profile/${userId}`}
+                        className="block px-4 py-2 text-xs font-semibold text-sand-700 hover:bg-ocean-50 hover:text-ocean-600 transition-colors duration-200"
+                      >
+                        Profile
+                      </Link>
+                    </motion.li>
+                    <motion.li {...springPress} className="rounded-xl overflow-hidden mb-0.5">
+                      <Link
+                        to="/notification"
+                        className="block px-4 py-2 text-xs font-semibold text-sand-700 hover:bg-ocean-50 hover:text-ocean-600 transition-colors duration-200"
+                      >
+                        Notifications
+                      </Link>
+                    </motion.li>
+                    <motion.li {...springPress} className="rounded-xl overflow-hidden mb-0.5">
+                      <Link
+                        to="/messages"
+                        className="block px-4 py-2 text-xs font-semibold text-sand-700 hover:bg-ocean-50 hover:text-ocean-600 transition-colors duration-200"
+                      >
+                        Messages
+                      </Link>
+                    </motion.li>
+                    <hr className="border-sand-200/80 my-1" />
+                    <motion.li
+                      {...springPress}
+                      className="rounded-xl overflow-hidden cursor-pointer"
+                      onClick={handleLogout}
+                    >
+                      <span className="block px-4 py-2 text-xs font-semibold text-red-650 hover:bg-red-50 transition-colors duration-200">
+                        Logout
+                      </span>
+                    </motion.li>
+                  </motion.ul>
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
+        )}
 
         {/* Desktop Menu links & profile */}
         {isLoggedIn && (
@@ -173,6 +251,14 @@ const Navbar = () => {
                         className="block px-4 py-2.5 text-sm font-semibold text-sand-700 hover:bg-ocean-50 hover:text-ocean-600 transition-colors duration-200"
                       >
                         Notification
+                      </Link>
+                    </motion.li>
+                    <motion.li {...springPress} className="rounded-xl overflow-hidden mb-1">
+                      <Link
+                        to="/messages"
+                        className="block px-4 py-2.5 text-sm font-semibold text-sand-700 hover:bg-ocean-50 hover:text-ocean-600 transition-colors duration-200"
+                      >
+                        Messages
                       </Link>
                     </motion.li>
                     <hr className="border-sand-200/80 my-1" />

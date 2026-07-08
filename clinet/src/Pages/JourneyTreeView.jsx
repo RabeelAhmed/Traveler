@@ -187,11 +187,11 @@ const JourneyTreeView = () => {
         {/* Tree Header Controls & Owner Information Card */}
         {/* Tree Header Controls & Owner Information Card */}
         <div className="max-w-4xl mx-auto px-4 sm:px-6 mt-6">
-          <div className="bg-white rounded-[32px] border border-sand-150 shadow-[0_12px_40px_rgba(20,41,57,0.03)] p-6 flex flex-col md:flex-row items-center justify-between gap-6 text-left relative overflow-hidden">
+          <div className="bg-white rounded-[32px] border border-sand-150 shadow-[0_12px_40px_rgba(20,41,57,0.03)] p-6 flex flex-col sm:flex-row items-center justify-between gap-6 text-left relative overflow-hidden">
             {/* Soft decorative accent background glow */}
             <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-ocean-50/30 to-orange-50/20 rounded-full blur-2xl pointer-events-none" />
             
-            <div className="flex items-center gap-4 relative z-10">
+            <div className="flex items-center gap-4 relative z-10 flex-shrink-0">
               <img
                 src={currentJourney.owner?.profilePicture?.url || ""}
                 alt="Owner Avatar"
@@ -212,25 +212,25 @@ const JourneyTreeView = () => {
             </div>
 
             {/* Badges and actions */}
-            <div className="flex items-center gap-3 relative z-10">
+            <div className="flex flex-wrap items-center justify-center sm:justify-end gap-3 relative z-10 w-full sm:w-auto">
               {isActive ? (
-                <span className="text-[10px] font-black text-orange-600 bg-orange-55 border border-orange-100/50 rounded-full px-3.5 py-1.5 uppercase tracking-wider animate-pulse">
+                <span className="text-[10px] font-black text-orange-600 bg-orange-55 border border-orange-100/50 rounded-full px-3.5 py-1.5 uppercase tracking-wider animate-pulse whitespace-nowrap">
                   Ongoing Journey 🗺️
                 </span>
               ) : (
-                <span className="text-[10px] font-black text-jade-700 bg-jade-50 border border-jade-100 rounded-full px-3.5 py-1.5 uppercase tracking-wider flex items-center gap-1.5 shadow-sm shadow-jade-50">
+                <span className="text-[10px] font-black text-jade-700 bg-jade-50 border border-jade-100 rounded-full px-3.5 py-1.5 uppercase tracking-wider flex items-center gap-1.5 shadow-sm shadow-jade-50 whitespace-nowrap">
                   <FaFlagCheckered className="text-jade-600" /> Completed Journey 🏁
                 </span>
               )}
 
               {/* Owner active buttons */}
               {isOwner && isActive && (
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap justify-center sm:justify-start">
                   <motion.button
                     whileHover={{ scale: 1.05, y: -1 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={() => setShowAddStepModal(true)}
-                    className="flex items-center gap-1.5 px-4.5 py-2.5 rounded-2xl text-xs font-black text-white bg-gradient-to-r from-ocean-600 to-ocean-500 hover:from-ocean-700 hover:to-ocean-600 shadow-md shadow-ocean-500/20 focus:outline-none transition-all duration-300"
+                    className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-xs font-black text-white bg-gradient-to-r from-ocean-600 to-ocean-500 hover:from-ocean-700 hover:to-ocean-600 shadow-md shadow-ocean-500/20 focus:outline-none transition-all duration-300 whitespace-nowrap"
                   >
                     <FiPlus className="stroke-[3]" /> Add Step
                   </motion.button>
@@ -238,7 +238,7 @@ const JourneyTreeView = () => {
                     whileHover={{ scale: 1.05, y: -1 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={handleEndJourney}
-                    className="flex items-center gap-1.5 px-4.5 py-2.5 rounded-2xl text-xs font-black text-white bg-gradient-to-r from-sunset-500 to-sunset-400 hover:from-sunset-600 hover:to-sunset-500 shadow-md shadow-sunset-500/20 focus:outline-none transition-all duration-300"
+                    className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-xs font-black text-white bg-gradient-to-r from-sunset-500 to-sunset-400 hover:from-sunset-600 hover:to-sunset-500 shadow-md shadow-sunset-500/20 focus:outline-none transition-all duration-300 whitespace-nowrap"
                   >
                     End Journey
                   </motion.button>

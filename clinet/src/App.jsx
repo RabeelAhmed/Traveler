@@ -32,11 +32,14 @@ import Loader from "./Components/Loader";
 import JourneyTreeView from "./Pages/JourneyTreeView";
 import TrendingDestinations from "./Pages/TrendingDestinations";
 import CollectionView from "./Pages/CollectionView";
+import Messages from "./Pages/Messages";
 
 import { KEY_ACCESS_TOKEN, getItem } from './utils/LocalStorageManager'
 import { setLoggedIn} from './Toolkit/slices/appConfigSlice';
 import { prependPost } from './Toolkit/slices/feedSlice';
 import { refreshTags } from './Toolkit/slices/trendingTagsSlice';
+import { useSocket } from "./context/SocketContext";
+import { receiveMessage } from "./Toolkit/slices/messageSlice";
 
 const REACT_APP_SERVER_BASE_URL = import.meta.env.VITE_SERVER_BASE_URL;
 function App() {
@@ -83,15 +86,14 @@ function App() {
     getNotifications();
   }, [userId]);
 
+  const socket = useSocket();
+
   const toasting = (message) => {
     toast.success(message);
   };
+
   useEffect(() => {
-    if (!userId) return;
-
-    const newsocket = io(REACT_APP_SERVER_BASE_URL, { autoConnect: true });
-
-    newsocket.emit("join", userId);
+    if (!socket || !userId) return;
 
     const handleNewNotification = (notification) => {
       const message = `${notification?.sender?.username} ${
@@ -117,13 +119,20 @@ function App() {
       });
     };
 
-    newsocket.on("newNotification", handleNewNotification);
-    newsocket.on("newPost", handleNewPost);
+    const handleNewMessage = (message) => {
+      dispatch(receiveMessage(message));
+    };
+
+    socket.on("newNotification", handleNewNotification);
+    socket.on("newPost", handleNewPost);
+    socket.on("newMessage", handleNewMessage);
 
     return () => {
-      newsocket.disconnect();
+      socket.off("newNotification", handleNewNotification);
+      socket.off("newPost", handleNewPost);
+      socket.off("newMessage", handleNewMessage);
     };
-  }, [userId]);
+  }, [socket, userId, dispatch]);
 
   return (
     <>
@@ -152,6 +161,7 @@ function App() {
             <Route path="/journey/:id" element={<JourneyTreeView />} />
             <Route path="/trending" element={<TrendingDestinations />} />
             <Route path="/collection/:id" element={<CollectionView />} />
+            <Route path="/messages" element={<Messages />} />
             <Route path="/" element={<FeedLoad />}>
               <Route path="/forum" element={<Forum />} />
               

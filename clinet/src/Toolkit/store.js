@@ -8,6 +8,7 @@ import bookmarkReducer from "./slices/bookmarkSlice";
 import trendingReducer from "./slices/trendingSlice";
 import trendingTagsReducer from "./slices/trendingTagsSlice";
 import collectionReducer from "./slices/collectionSlice";
+import messageReducer from "./slices/messageSlice";
 export default configureStore ({
     reducer: {
         appConfig: appConfigReducer,
@@ -19,5 +20,6 @@ export default configureStore ({
         trending: trendingReducer,
         trendingTags: trendingTagsReducer,
         collection: collectionReducer,
+        message: messageReducer,
     }
 })
