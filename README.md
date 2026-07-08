@@ -274,6 +274,22 @@ traveler/
     <td><img src="clinet/docs/screenshots/travel_advisor.png" alt="Travel Advisor" width="450"/></td>
     <td><img src="clinet/docs/screenshots/journey_tree.png" alt="Journey Tree" width="450"/></td>
   </tr>
+  <tr>
+    <td align="center"><strong>Profile & Collections</strong></td>
+    <td align="center"><strong>Real-time Notifications</strong></td>
+  </tr>
+  <tr>
+    <td><img src="clinet/docs/screenshots/profile.png" alt="Profile" width="450"/></td>
+    <td><img src="clinet/docs/screenshots/notifications.png" alt="Notifications" width="450"/></td>
+  </tr>
+  <tr>
+    <td align="center"><strong>Direct Messaging</strong></td>
+    <td align="center"><strong>-</strong></td>
+  </tr>
+  <tr>
+    <td><img src="clinet/docs/screenshots/measage.png" alt="Direct Messages" width="450"/></td>
+    <td>-</td>
+  </tr>
 </table>
 
 ---
