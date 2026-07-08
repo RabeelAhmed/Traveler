@@ -48,7 +48,7 @@ export const ProfileUpdate = () => {
     });
 
     if (profileImage) {
-      updateData.append("profileImage", profileImage);
+      updateData.append("profilePicture", profileImage);
     }
 
     try {
