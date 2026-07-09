@@ -162,7 +162,7 @@ const generateSignature = (req, res) => {
 };
 const getStory = async(req,res) => {
   const allStory = await story.find().populate('userId', 'profilePicture');
-  const curUserId = req.user?.userId;
+  const curUserId = req.user?.user_Id;
   return res.json(success(201,{
     stories: allStory.map((story) => mapStoryOutput(story, curUserId)),
   }
@@ -172,7 +172,7 @@ const getStory = async(req,res) => {
 const likeAndUnlikeStory = async (req, res) => {
   try {
     const { storyId } = req.body;
-    const curUserId = req.user?.userId; // Ensure user is authenticated
+    const curUserId = req.user?.user_Id; // Ensure user is authenticated
 
     if (!storyId) {
       return res.status(400).json({ success: false, message: "Story ID is required" });
@@ -205,6 +205,18 @@ const likeAndUnlikeStory = async (req, res) => {
     }
 
     await curStory.save(); // Save updated likes
+
+    const ownerId = curStory.userId?._id || curStory.userId;
+    if (!isLiked && ownerId.toString() !== curUserId.toString()) {
+      const notification = new Notification({
+        recipient: ownerId,
+        sender: curUserId,
+        type: "story_like",
+        story: storyId,
+      });
+      await notification.save();
+      notify(notification);
+    }
 
     return res.status(200).json({
       success: true,

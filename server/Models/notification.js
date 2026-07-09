@@ -13,7 +13,7 @@ sender: {
 }, // Who triggered the event
 type: { 
     type: String, 
-    enum: ["like", "follow", "comment", "Achievement", "Achivement", "journey_start", "journey_step", "journey_complete"], 
+    enum: ["like", "follow", "comment", "Achievement", "Achivement", "journey_start", "journey_step", "journey_complete", "story_like"], 
     required: true 
 }, // Notification type
 post: { 
@@ -26,6 +26,11 @@ journey: {
     ref: "Journey",
     default: null,
 }, // Optional, for journey notifications
+story: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Story",
+    default: null,
+}, // Optional, for story notifications
 isRead: { 
     type: Boolean, 
     default: false 

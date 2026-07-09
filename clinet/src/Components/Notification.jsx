@@ -14,6 +14,7 @@ const Notifications = ({ notifications = [] }) => {
   // Notification Messages Map
   const notificationMessages = {
     like: "liked your post! ❤️",
+    story_like: "liked your story! ❤️",
     comment: "commented on your post! 💬",
     follow: "followed you! 🔥",
     Achievement: "earned an achievement milestone!",
@@ -26,6 +27,7 @@ const Notifications = ({ notifications = [] }) => {
   const badgeColors = {
     follow: "bg-ocean-500 text-white",
     like: "bg-sunset-500 text-white",
+    story_like: "bg-sunset-500 text-white",
     comment: "bg-sand-600 text-white",
     Achievement: "bg-jade-500 text-white",
     Achivement: "bg-jade-500 text-white",
@@ -39,6 +41,7 @@ const Notifications = ({ notifications = [] }) => {
       case "follow":
         return <FaUserPlus className="text-[9px]" />;
       case "like":
+      case "story_like":
         return <FaHeart className="text-[9px]" />;
       case "comment":
         return <FaComment className="text-[9px]" />;
@@ -88,6 +91,9 @@ const Notifications = ({ notifications = [] }) => {
     if (notif.post) {
       return `/post/${notif.post._id || notif.post}`;
     }
+    if (notif.type === 'story_like') {
+      return `/story`;
+    }
     return null;
   };
 
@@ -112,6 +118,7 @@ const Notifications = ({ notifications = [] }) => {
             const accentColors = {
               follow: "border-l-ocean-500",
               like: "border-l-sunset-500",
+              story_like: "border-l-sunset-500",
               comment: "border-l-sand-500",
               Achivement: "border-l-jade-500",
               journey_start: "border-l-amber-500",

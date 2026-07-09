@@ -60,6 +60,7 @@ function App() {
   const [notifications, setNotifications] = useState([]);
   const notificationMessages = {
     like: "liked your post! ❤️",
+    story_like: "liked your story! ❤️",
     comment: "commented on your post! 💬",
     follow: "followed you! 🔥",
     Achievement: "You Got An Achievement!",
