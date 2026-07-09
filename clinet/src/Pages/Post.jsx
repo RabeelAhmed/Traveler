@@ -11,7 +11,9 @@ import AddComment from "../Components/AddComment";
 import { PageNotFound } from "./PageNotFound";
 import Loader from "../Components/Loader";
 import PageTransition from "../Components/PageTransition";
-import { fadeUp } from "../utils/motion";
+import { fadeUp, staggerContainer } from "../utils/motion";
+import ReviewCard from "../Components/ReviewCard";
+import { getReviewsForLocation } from "../Toolkit/slices/reviewSlice";
 
 const Post = () => {
   const { id } = useParams();
@@ -45,6 +47,15 @@ const Post = () => {
       dispatch(fetchPostById(id));
     }
   }, [id, dispatch, post, feedStatus]);
+
+  // Load reviews for the post location
+  const postLocation = post?.location;
+  const { reviews: locationReviews } = useSelector((state) => state.review);
+  useEffect(() => {
+    if (postLocation) {
+      dispatch(getReviewsForLocation(postLocation));
+    }
+  }, [postLocation, dispatch]);
 
   // Scroll to comments (for desktop scroll action)
   const scrollToComment = () => {
@@ -120,6 +131,51 @@ const Post = () => {
               ))}
             </div>
           </div>
+
+          {/* Reviews Preview Section */}
+          {post.location && (
+            <div className="mt-8 border border-sand-100/80 bg-white p-8 md:p-10 rounded-3xl shadow-[0_8px_30px_rgb(20,41,57,0.02)]">
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="font-display font-semibold text-xl text-sand-900">
+                  Reviews for <span className="text-ocean-600">{post.location}</span>
+                </h2>
+                <a
+                  href={`/reviews?location=${encodeURIComponent(post.location)}`}
+                  className="text-xs font-semibold text-ocean-600 hover:text-ocean-700 transition-colors whitespace-nowrap"
+                >
+                  See all →
+                </a>
+              </div>
+
+              {locationReviews.length === 0 ? (
+                <a
+                  href={`/reviews?location=${encodeURIComponent(post.location)}`}
+                  className="block bg-jade-50 border border-jade-200 rounded-2xl p-5 text-center text-jade-600 font-semibold text-sm hover:bg-jade-100 transition-colors"
+                >
+                  ✨ Be the first to review this place →
+                </a>
+              ) : (
+                <motion.div
+                  variants={staggerContainer()}
+                  initial="hidden"
+                  animate="visible"
+                  className="space-y-4"
+                >
+                  {locationReviews.slice(0, 2).map((review) => (
+                    <ReviewCard key={review._id} review={review} />
+                  ))}
+                  {locationReviews.length > 2 && (
+                    <a
+                      href={`/reviews?location=${encodeURIComponent(post.location)}`}
+                      className="block text-center text-sm font-semibold text-ocean-600 hover:text-ocean-700 py-2 transition-colors"
+                    >
+                      See all {locationReviews.length} reviews →
+                    </a>
+                  )}
+                </motion.div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Mobile Bottom Comments Sheet */}

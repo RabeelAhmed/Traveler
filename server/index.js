@@ -27,6 +27,7 @@ const journeyRouter = require('./Routers/journeyRouter');
 const bookmarkRouter = require('./Routers/bookmarkRouter');
 const collectionRouter = require('./Routers/collectionRouter');
 const messageRouter = require('./Routers/messageRouter');
+const reviewRouter = require('./Routers/reviewRouter');
 const {initsocket} = require('./socket')
 initsocket(io);
 
@@ -45,6 +46,7 @@ app.use('/journey',journeyRouter)
 app.use('/bookmark', bookmarkRouter)
 app.use('/collection', collectionRouter)
 app.use('/message', messageRouter)
+app.use('/review', reviewRouter)
 app.get('/', (req, res) => {
   res.send('Hello World!')
 })

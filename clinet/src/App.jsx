@@ -33,6 +33,7 @@ import JourneyTreeView from "./Pages/JourneyTreeView";
 import TrendingDestinations from "./Pages/TrendingDestinations";
 import CollectionView from "./Pages/CollectionView";
 import Messages from "./Pages/Messages";
+import DestinationReviews from "./Pages/DestinationReviews";
 
 import { KEY_ACCESS_TOKEN, getItem } from './utils/LocalStorageManager'
 import { setLoggedIn} from './Toolkit/slices/appConfigSlice';
@@ -168,6 +169,7 @@ function App() {
             <Route path="/trending" element={<TrendingDestinations />} />
             <Route path="/collection/:id" element={<CollectionView />} />
             <Route path="/messages" element={<Messages />} />
+            <Route path="/reviews" element={<DestinationReviews />} />
             <Route path="/" element={<FeedLoad />}>
               <Route path="/forum" element={<Forum />} />
               

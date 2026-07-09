@@ -128,7 +128,9 @@ Most social platforms treat travel as a secondary activity. Traveler was built f
 │  /story          │        │                     │
 │  /user           │        │  CSV: 69 Pakistan   │
 │  /journey        │        │  tourist sites      │
-│  socket.io       │        └─────────────────────┘
+│  /collection     │        └─────────────────────┘
+│  /message        │
+│  socket.io       │
 └────────┬─────────┘
          │
 ┌────────▼─────────┐
@@ -139,6 +141,9 @@ Most social platforms treat travel as a secondary activity. Traveler was built f
 │  stories         │
 │  journeys        │
 │  notifications   │
+│  collections     │
+│  conversations   │
+│  messages        │
 └────────┬─────────┘
          │
 ┌────────▼─────────┐
@@ -454,6 +459,26 @@ Protected routes require a JWT token in the `Authorization: Bearer <token>` head
 | `POST` | `/journey/:id/end` | ✅ | Mark a journey as complete |
 | `GET` | `/journey/:id` | Optional | Retrieve a journey with its step tree |
 
+### Collections — `/collection`
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|:----:|-------------|
+| `GET` | `/collection` | ✅ | Get all collections owned by current user |
+| `POST` | `/collection` | ✅ | Create a new collection |
+| `GET` | `/collection/:id` | ✅ | Get a collection details by ID |
+| `PUT` | `/collection/:id` | ✅ | Update collection details (name, description, isPublic) |
+| `DELETE` | `/collection/:id` | ✅ | Delete a collection |
+| `POST` | `/collection/toggle-post` | ✅ | Toggle (add/remove) a post in a collection |
+
+### Direct Messages — `/message`
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|:----:|-------------|
+| `POST` | `/message/conversation` | ✅ | Get or create a 1-to-1 conversation with another user |
+| `GET` | `/message/conversations` | ✅ | Get all conversations for current user |
+| `GET` | `/message/:conversationId` | ✅ | Get messages within a conversation (paginated) |
+| `POST` | `/message/:conversationId` | ✅ | Send a new message |
+
 ### AI Agent — `http://localhost:5001`
 
 | Method | Endpoint | Auth | Description |
@@ -497,14 +522,29 @@ userId (ref: User), type (like | comment | follow), fromUser (ref: User),
 postId (ref: Post), isRead, createdAt
 ```
 
+### Collection
+```
+owner (ref: User), name, description, posts[] (ref: Post), isPublic, createdAt
+```
+
+### Conversation
+```
+participants[] (ref: User), lastMessage (ref: Message), updatedAt
+```
+
+### Message
+```
+conversationId (ref: Conversation), sender (ref: User), text, isRead, createdAt
+```
+
 ---
 
 ## 🔮 Future Improvements
 
 - [ ] **AI Model Upgrade** — Replace CSV filtering with a trained ML model (cosine similarity / collaborative filtering)
-- [ ] **Direct Messaging** — Private real-time chat via Socket.io rooms
+- [x] **Direct Messaging** — Private real-time chat via Socket.io
 - [ ] **Progressive Web App** — Service worker and manifest for offline support
-- [ ] **Post Bookmarks** — Save posts to personal reading lists
+- [x] **Post Bookmarks / Collections** — Save posts to custom curated albums/collections
 - [ ] **Multi-language Support** — i18n with React Intl
 - [ ] **Analytics Dashboard** — Post reach, engagement rates, and follower growth charts
 - [ ] **Email Verification** — Verify email address after registration
