@@ -130,6 +130,7 @@ Most social platforms treat travel as a secondary activity. Traveler was built f
 │  /journey        │        │  tourist sites      │
 │  /collection     │        └─────────────────────┘
 │  /message        │
+│  /review         │
 │  socket.io       │
 └────────┬─────────┘
          │
@@ -144,6 +145,7 @@ Most social platforms treat travel as a secondary activity. Traveler was built f
 │  collections     │
 │  conversations   │
 │  messages        │
+│  reviews         │
 └────────┬─────────┘
          │
 ┌────────▼─────────┐
@@ -479,6 +481,16 @@ Protected routes require a JWT token in the `Authorization: Bearer <token>` head
 | `GET` | `/message/:conversationId` | ✅ | Get messages within a conversation (paginated) |
 | `POST` | `/message/:conversationId` | ✅ | Send a new message |
 
+### Destination Reviews — `/review`
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|:----:|-------------|
+| `POST` | `/review` | ✅ | Create or update a review for a location (upsert) |
+| `GET` | `/review/location` | ✅ | Get all reviews & aggregation summary for a location |
+| `GET` | `/review/mine` | ✅ | Get the current user's review for a location |
+| `DELETE` | `/review/:id` | ✅ | Delete a review (author only) |
+| `POST` | `/review/:id/helpful` | ✅ | Toggle helpful status on a review |
+
 ### AI Agent — `http://localhost:5001`
 
 | Method | Endpoint | Auth | Description |
@@ -535,6 +547,11 @@ participants[] (ref: User), lastMessage (ref: Message), updatedAt
 ### Message
 ```
 conversationId (ref: Conversation), sender (ref: User), text, isRead, createdAt
+```
+
+### Review
+```
+author (ref: User), location, rating (1-5), title, body, visitedAt, helpful[] (ref: User), createdAt
 ```
 
 ---
