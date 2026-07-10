@@ -88,6 +88,9 @@ const JourneyTreeView = () => {
   if (!currentJourney) return null;
 
   const isOwner = myProfile?._id === currentJourney.owner?._id;
+  const isCollaborator = currentJourney.collaborators?.some(
+    (c) => (c._id || c).toString() === myProfile?._id?.toString()
+  );
   const isActive = currentJourney.isActive;
 
   // Selected Step details for modal
@@ -244,8 +247,8 @@ const JourneyTreeView = () => {
                 </span>
               )}
 
-              {/* Owner active buttons */}
-              {isOwner && isActive && (
+              {/* Collaborator / Owner active buttons */}
+              {isActive && (isOwner || isCollaborator) && (
                 <div className="flex gap-2 flex-wrap justify-center sm:justify-start">
                   <motion.button
                     whileHover={{ scale: 1.05, y: -1 }}
@@ -255,14 +258,16 @@ const JourneyTreeView = () => {
                   >
                     <FiPlus className="stroke-[3]" /> Add Step
                   </motion.button>
-                  <motion.button
-                    whileHover={{ scale: 1.05, y: -1 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={handleEndJourney}
-                    className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-xs font-black text-white bg-gradient-to-r from-sunset-500 to-sunset-400 hover:from-sunset-600 hover:to-sunset-500 shadow-md shadow-sunset-500/20 focus:outline-none transition-all duration-300 whitespace-nowrap"
-                  >
-                    End Journey
-                  </motion.button>
+                  {isOwner && (
+                    <motion.button
+                      whileHover={{ scale: 1.05, y: -1 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={handleEndJourney}
+                      className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-xs font-black text-white bg-gradient-to-r from-sunset-500 to-sunset-400 hover:from-sunset-600 hover:to-sunset-500 shadow-md shadow-sunset-500/20 focus:outline-none transition-all duration-300 whitespace-nowrap"
+                    >
+                      End Journey
+                    </motion.button>
+                  )}
                 </div>
               )}
             </div>
