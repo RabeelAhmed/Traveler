@@ -57,6 +57,47 @@ export const endJourney = createAsyncThunk(
   }
 );
 
+export const inviteCollaborator = createAsyncThunk(
+  "journey/inviteCollaborator",
+  async ({ journeyId, userId }) => {
+    try {
+      const response = await axiosClient.post(`/journey/${journeyId}/invite`, { userId });
+      toast.success("Invite sent!");
+      return response.data.result;
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to send invite");
+      return Promise.reject(error);
+    }
+  }
+);
+
+export const respondToInvite = createAsyncThunk(
+  "journey/respondToInvite",
+  async ({ journeyId, accept }) => {
+    try {
+      const response = await axiosClient.post(`/journey/${journeyId}/invite/respond`, { accept });
+      return { ...response.data.result, journeyId, accept };
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to respond to invite");
+      return Promise.reject(error);
+    }
+  }
+);
+
+export const removeCollaborator = createAsyncThunk(
+  "journey/removeCollaborator",
+  async ({ journeyId, userId }) => {
+    try {
+      await axiosClient.delete(`/journey/${journeyId}/collaborator/${userId}`);
+      toast.success("Collaborator removed");
+      return { journeyId, userId };
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to remove collaborator");
+      return Promise.reject(error);
+    }
+  }
+);
+
 const journeySlice = createSlice({
   name: "journey",
   initialState: {
@@ -92,6 +133,18 @@ const journeySlice = createSlice({
       })
       .addCase(endJourney.fulfilled, (state, action) => {
         state.currentJourney = action.payload;
+      })
+      .addCase(respondToInvite.fulfilled, (state, action) => {
+        // If user accepted, they are now a collaborator on this journey
+        // (The journey page will refetch; this handles invite notifications)
+      })
+      .addCase(removeCollaborator.fulfilled, (state, action) => {
+        if (state.currentJourney) {
+          const { userId } = action.payload;
+          state.currentJourney.collaborators = state.currentJourney.collaborators.filter(
+            (c) => (c._id || c).toString() !== userId.toString()
+          );
+        }
       })
       .addMatcher(
         (action) => action.type === "post/likeAndUnlike/fulfilled",

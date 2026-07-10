@@ -1,16 +1,22 @@
-import React from "react";
+import React, { useState } from "react";
 import { formatDistanceToNow, isToday, differenceInDays } from "date-fns";
 import { FaHeart, FaComment, FaUserPlus, FaTrophy, FaBellSlash } from "react-icons/fa";
-import { MdOutlineRoute, MdOutlineFlag, MdOutlineExplore } from "react-icons/md";
+import { MdOutlineRoute, MdOutlineFlag, MdOutlineExplore, MdOutlineGroupAdd, MdOutlineCheck } from "react-icons/md";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
 import ProfileImage from "./ProfileImage";
 import Header from "./Header";
 import PageTransition from "./PageTransition";
-import { fadeUp, staggerContainer } from "../utils/motion";
+import { fadeUp, staggerContainer, springPress } from "../utils/motion";
+import { respondToInvite } from "../Toolkit/slices/journeySlice";
 
 const Notifications = ({ notifications = [] }) => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  // Track responded invites: { [notifId]: 'accepted' | 'declined' }
+  const [responded, setResponded] = useState({});
+
   // Notification Messages Map
   const notificationMessages = {
     like: "liked your post! ❤️",
@@ -22,6 +28,8 @@ const Notifications = ({ notifications = [] }) => {
     journey_start: "started a new journey! 🚀",
     journey_step: "added a new step to their journey 🗺️",
     journey_complete: "completed their journey! 🏁",
+    journey_invite: "invited you to collaborate on a journey 🤝",
+    journey_invite_accepted: "accepted your collaboration invite ✅",
   };
 
   const badgeColors = {
@@ -34,6 +42,8 @@ const Notifications = ({ notifications = [] }) => {
     journey_start: "bg-sunset-500 text-white",
     journey_step: "bg-ocean-500 text-white",
     journey_complete: "bg-jade-500 text-white",
+    journey_invite: "bg-sunset-500 text-white",
+    journey_invite_accepted: "bg-ocean-500 text-white",
   };
 
   const BadgeIcon = ({ type }) => {
@@ -51,6 +61,10 @@ const Notifications = ({ notifications = [] }) => {
         return <MdOutlineRoute className="text-[9px]" />;
       case "journey_complete":
         return <MdOutlineFlag className="text-[9px]" />;
+      case "journey_invite":
+        return <MdOutlineGroupAdd className="text-[9px]" />;
+      case "journey_invite_accepted":
+        return <MdOutlineCheck className="text-[9px]" />;
       case "Achievement":
       case "Achivement":
       default:
@@ -124,6 +138,8 @@ const Notifications = ({ notifications = [] }) => {
               journey_start: "border-l-amber-500",
               journey_step: "border-l-ocean-400",
               journey_complete: "border-l-jade-500",
+              journey_invite: "border-l-sunset-500",
+              journey_invite_accepted: "border-l-ocean-500",
             };
             const leftBorderColor = accentColors[notif.type] || "border-l-sand-300";
 
@@ -180,6 +196,52 @@ const Notifications = ({ notifications = [] }) => {
                     <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-jade-500 shadow-sm shadow-jade-300"></span>
                   </div>
                 )}
+
+                {/* journey_invite action buttons */}
+                {notif.type === 'journey_invite' && (() => {
+                  const currentStatus = responded[notif._id] || notif.inviteStatus || 'pending';
+                  if (currentStatus !== 'pending') {
+                    return (
+                      <div className="ml-auto flex-shrink-0">
+                        <span className={`text-xs font-semibold ${
+                          currentStatus === 'accepted' ? 'text-jade-600' : 'text-sand-400'
+                        }`}>
+                          {currentStatus === 'accepted' ? 'Accepted ✓' : 'Declined'}
+                        </span>
+                      </div>
+                    );
+                  }
+                  return (
+                    <div className="ml-auto flex-shrink-0">
+                      <div className="flex flex-col gap-1.5">
+                        <motion.button
+                          {...springPress}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const journeyId = notif.journey?._id || notif.journey;
+                            dispatch(respondToInvite({ journeyId, accept: true }));
+                            setResponded((prev) => ({ ...prev, [notif._id]: 'accepted' }));
+                          }}
+                          className="px-3 py-1 rounded-full bg-jade-500 text-white text-xs font-semibold whitespace-nowrap"
+                        >
+                          Accept
+                        </motion.button>
+                        <motion.button
+                          {...springPress}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const journeyId = notif.journey?._id || notif.journey;
+                            dispatch(respondToInvite({ journeyId, accept: false }));
+                            setResponded((prev) => ({ ...prev, [notif._id]: 'declined' }));
+                          }}
+                          className="px-3 py-1 rounded-full bg-sand-100 text-sand-600 border border-sand-200 text-xs font-semibold whitespace-nowrap"
+                        >
+                          Decline
+                        </motion.button>
+                      </div>
+                    </div>
+                  );
+                })()}
               </motion.div>
             );
           })}

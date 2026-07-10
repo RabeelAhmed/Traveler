@@ -68,6 +68,8 @@ function App() {
     journey_start: "started a new journey! 🚀",
     journey_step: "added a new step to their journey 🗺️",
     journey_complete: "completed their journey! 🏁",
+    journey_invite: "invited you to collaborate on a journey 🤝",
+    journey_invite_accepted: "accepted your collaboration invite ✅",
   };
   // Fetch Notifications
   useEffect(() => {

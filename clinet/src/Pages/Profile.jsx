@@ -13,6 +13,7 @@ import {
 import { getSavedPosts } from "../Toolkit/slices/bookmarkSlice";
 import { getUserCollections } from "../Toolkit/slices/collectionSlice";
 import { getOrCreateConversation } from "../Toolkit/slices/messageSlice";
+import { axiosClient } from "../utils/axiosClient";
 import NewPostPrompt from "../Components/NewPostPrompt";
 import PostCard from "../Components/PostCard";
 import CollectionCard from "../Components/CollectionCard";
@@ -58,10 +59,23 @@ const CountUp = ({ target }) => {
 const Profile = () => {
   const { id } = useParams();
   const dispatch = useDispatch();
+  const [collaboratingJourneys, setCollaboratingJourneys] = useState([]);
   const navigate = useNavigate();
   const location = useLocation();
 
   const myProfile = useSelector((state) => state.appConfig.myProfile);
+  // isOwnerProfile: used for fetching collaborating journeys before owner state is set
+  const isOwnerProfile = myProfile?._id === id;
+
+  // Fetch journeys the current user is collaborating on
+  useEffect(() => {
+    if (isOwnerProfile) {
+      axiosClient.get('/journey/collaborating')
+        .then((res) => setCollaboratingJourneys(res.data.result?.journeys || []))
+        .catch(() => {});
+    }
+  }, [isOwnerProfile]);
+
   const profile = useSelector((state) => state.userProfile.user);
   const posts = useSelector((state) => state.userProfile.posts);
   const isFollowing = useSelector((state) => state.userProfile.isFollowing);
@@ -385,6 +399,44 @@ const Profile = () => {
                       </motion.div>
                     )}
                   </motion.div>
+
+                  {/* Collaborating On sub-section */}
+                  {owner && collaboratingJourneys.length > 0 && (
+                    <div className="mt-8">
+                      <div className="flex items-center gap-2 mb-4">
+                        <h3 className="font-display font-semibold text-sand-800 text-base">Collaborating On</h3>
+                        <span className="text-xs font-bold text-jade-600 bg-jade-50 border border-jade-200 px-2 py-0.5 rounded-full">Collaborator</span>
+                      </div>
+                      <motion.div
+                        variants={staggerContainer(0.06, 0.04)}
+                        initial="hidden"
+                        animate="visible"
+                        className="space-y-3"
+                      >
+                        {collaboratingJourneys.map((journey) => (
+                          <motion.div key={journey._id} variants={fadeUp}>
+                            <a
+                              href={`/journey/${journey._id}`}
+                              className="flex items-center gap-3 bg-white rounded-2xl border border-jade-100 p-4 shadow-sm hover:shadow-md hover:border-jade-200 transition-all group"
+                            >
+                              <div className="w-10 h-10 rounded-xl bg-jade-50 border border-jade-200 flex items-center justify-center flex-shrink-0">
+                                <span className="text-lg">🗺️</span>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-display font-semibold text-sand-900 text-sm truncate group-hover:text-jade-600 transition-colors">{journey.title}</p>
+                                <p className="text-xs text-sand-400 mt-0.5">by {journey.owner?.fullname} · {journey.steps?.length || 0} stops</p>
+                              </div>
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                journey.isActive ? 'bg-orange-50 text-orange-600 border border-orange-100' : 'bg-jade-50 text-jade-600 border border-jade-200'
+                              }`}>
+                                {journey.isActive ? 'Ongoing' : 'Completed'}
+                              </span>
+                            </a>
+                          </motion.div>
+                        ))}
+                      </motion.div>
+                    </div>
+                  )}
                 </motion.div>
               )}
 

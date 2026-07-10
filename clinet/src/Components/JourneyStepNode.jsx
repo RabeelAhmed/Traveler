@@ -84,6 +84,23 @@ export const JourneyStepNode = ({ step, index, total, onOpenDetail, isLeftAligne
               <span>{step?.comments?.length || 0} Comments</span>
             </span>
           </div>
+
+          {/* Added by attribution — shows step contributor */}
+          {step?.owner && (
+            <div className={`flex items-center gap-2 mt-3 pt-3 border-t border-sand-100/80 ${
+              isLeftAligned ? "justify-end" : "justify-start"
+            }`}>
+              <img
+                src={step.owner.avatar || step.owner.profilePicture?.url || ""}
+                alt={step.owner.name || step.owner.fullname}
+                className="w-5 h-5 rounded-full object-cover border border-sand-200 bg-sand-50 flex-shrink-0"
+              />
+              <span className="text-[10px] font-semibold text-sand-400">
+                Added by{" "}
+                <span className="text-sand-600">{step.owner.name || step.owner.fullname}</span>
+              </span>
+            </div>
+          )}
         </motion.div>
       </div>
 

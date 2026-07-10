@@ -30,6 +30,9 @@ const journeySchema = new Schema({
     type: Date,
     default: null,
   },
+  collaborators: [{ type: Schema.Types.ObjectId, ref: 'user' }],
+  pendingInvites: [{ type: Schema.Types.ObjectId, ref: 'user' }],
+  maxCollaborators: { type: Number, default: 5 },
 });
 
 module.exports = mongoose.model("Journey", journeySchema);

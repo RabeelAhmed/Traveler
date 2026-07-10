@@ -13,7 +13,7 @@ sender: {
 }, // Who triggered the event
 type: { 
     type: String, 
-    enum: ["like", "follow", "comment", "Achievement", "Achivement", "journey_start", "journey_step", "journey_complete", "story_like"], 
+    enum: ["like", "follow", "comment", "Achievement", "Achivement", "journey_start", "journey_step", "journey_complete", "story_like", "journey_invite", "journey_invite_accepted"], 
     required: true 
 }, // Notification type
 post: { 
@@ -31,6 +31,11 @@ story: {
     ref: "Story",
     default: null,
 }, // Optional, for story notifications
+inviteStatus: {
+    type: String,
+    enum: ["pending", "accepted", "declined"],
+    default: "pending"
+},
 isRead: { 
     type: Boolean, 
     default: false 

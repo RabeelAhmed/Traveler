@@ -1,15 +1,15 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { motion, AnimatePresence } from "framer-motion";
 import { CiCalendar, CiLocationOn } from "react-icons/ci";
-import { FiX, FiPlus, FiCheck, FiUpload } from "react-icons/fi";
+import { FiX, FiPlus, FiCheck, FiUpload, FiSearch, FiUsers } from "react-icons/fi";
 import { FaFlagCheckered } from "react-icons/fa";
 import ReactStars from "react-rating-stars-component";
 import Swal from "sweetalert2";
 import toast from "react-hot-toast";
 
-import { getJourney, addStep, endJourney, clearCurrentJourney } from "../Toolkit/slices/journeySlice";
+import { getJourney, addStep, endJourney, clearCurrentJourney, inviteCollaborator, removeCollaborator } from "../Toolkit/slices/journeySlice";
 import { uploadImagesToCloudinary } from "../utils/cloudinaryUpload";
 import JourneyStepNode from "../Components/JourneyStepNode";
 import PostComp from "../Components/Post";
@@ -33,6 +33,12 @@ const JourneyTreeView = () => {
   const [selectedStepId, setSelectedStepId] = useState(null);
   const [showAddStepModal, setShowAddStepModal] = useState(false);
 
+  // Collaborator invite state
+  const [inviteQuery, setInviteQuery] = useState("");
+  const [inviteResults, setInviteResults] = useState([]);
+  const [showInviteDropdown, setShowInviteDropdown] = useState(false);
+  const inviteDebounceRef = React.useRef(null);
+
   // Add Step Form States
   const [stepDesc, setStepDesc] = useState("");
   const [stepLoc, setStepLoc] = useState("");
@@ -41,6 +47,21 @@ const JourneyTreeView = () => {
   const [stepHashtags, setStepHashtags] = useState([]);
   const [stepHashtagInput, setStepHashtagInput] = useState("");
   const [isUploading, setIsUploading] = useState(false);
+
+  // Debounced invite search
+  const handleInviteSearch = useCallback((q) => {
+    setInviteQuery(q);
+    if (inviteDebounceRef.current) clearTimeout(inviteDebounceRef.current);
+    if (!q.trim()) { setInviteResults([]); setShowInviteDropdown(false); return; }
+    inviteDebounceRef.current = setTimeout(async () => {
+      try {
+        const { axiosClient } = await import("../utils/axiosClient");
+        const res = await axiosClient.get(`/post/search?query=${encodeURIComponent(q)}`);
+        setInviteResults(res.data.result?.users || res.data.users || []);
+        setShowInviteDropdown(true);
+      } catch { setInviteResults([]); }
+    }, 300);
+  }, []);
 
   useEffect(() => {
     dispatch(getJourney(id));
@@ -247,6 +268,113 @@ const JourneyTreeView = () => {
             </div>
           </div>
         </div>
+
+        {/* Collaborators Panel — owner only on active journey */}
+        {isOwner && isActive && (
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 mt-4">
+            <div className="bg-white rounded-3xl border border-sand-150 shadow-[0_8px_30px_rgba(20,41,57,0.03)] p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <FiUsers className="text-ocean-500" />
+                <h3 className="font-display font-semibold text-sand-900 text-base">Collaborators</h3>
+                <span className="ml-auto text-xs text-sand-400">
+                  {currentJourney.collaborators?.length || 0} / {currentJourney.maxCollaborators || 5}
+                </span>
+              </div>
+
+              {/* Current collaborators */}
+              {currentJourney.collaborators?.length > 0 && (
+                <div className="space-y-2 mb-4">
+                  {currentJourney.collaborators.map((collab) => (
+                    <div key={collab._id} className="flex items-center gap-2">
+                      <img
+                        src={collab.profilePicture?.url || ""}
+                        className="w-7 h-7 rounded-full object-cover border border-sand-200"
+                        alt={collab.fullname}
+                      />
+                      <span className="text-sm font-medium text-sand-800 flex-1">{collab.fullname}</span>
+                      <motion.button
+                        {...springPress}
+                        onClick={() => dispatch(removeCollaborator({ journeyId: id, userId: collab._id }))}
+                        className="text-sand-400 hover:text-red-400 transition-colors p-1 rounded-lg"
+                      >
+                        <FiX className="text-sm" />
+                      </motion.button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Pending invites */}
+              {currentJourney.pendingInvites?.length > 0 && (
+                <div className="space-y-2 mb-4">
+                  {currentJourney.pendingInvites.map((pending) => (
+                    <div key={pending._id} className="flex items-center gap-2 opacity-60">
+                      <img
+                        src={pending.profilePicture?.url || ""}
+                        className="w-7 h-7 rounded-full object-cover border border-sand-200"
+                        alt={pending.fullname}
+                      />
+                      <span className="text-sm font-medium text-sand-700 flex-1">{pending.fullname}</span>
+                      <span className="text-[10px] font-bold text-jade-500 bg-jade-50 border border-jade-200 px-2 py-0.5 rounded-full">Pending</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Invite search */}
+              {(currentJourney.collaborators?.length || 0) >= (currentJourney.maxCollaborators || 5) ? (
+                <p className="text-xs text-sand-400 mt-2">Max {currentJourney.maxCollaborators || 5} collaborators reached.</p>
+              ) : (
+                <div className="relative">
+                  <div className="relative flex items-center">
+                    <FiSearch className="absolute left-3 text-sand-400 text-sm" />
+                    <input
+                      type="text"
+                      placeholder="Search users to invite..."
+                      value={inviteQuery}
+                      onChange={(e) => handleInviteSearch(e.target.value)}
+                      onBlur={() => setTimeout(() => setShowInviteDropdown(false), 200)}
+                      className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-sand-200 text-sm text-sand-800 focus:outline-none focus:ring-2 focus:ring-ocean-300 bg-sand-50"
+                    />
+                  </div>
+                  <AnimatePresence>
+                    {showInviteDropdown && inviteResults.length > 0 && (
+                      <motion.div
+                        initial={{ opacity: 0, scaleY: 0.9, y: -4 }}
+                        animate={{ opacity: 1, scaleY: 1, y: 0 }}
+                        exit={{ opacity: 0, scaleY: 0.9 }}
+                        style={{ transformOrigin: 'top' }}
+                        className="absolute z-30 mt-1 w-full bg-white/90 backdrop-blur-md rounded-2xl border border-sand-200 shadow-xl overflow-hidden"
+                      >
+                        {inviteResults.map((user) => (
+                          <div key={user._id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-ocean-50 transition-colors">
+                            <img
+                              src={user.profilePicture?.url || ""}
+                              className="w-7 h-7 rounded-full object-cover border border-sand-200"
+                              alt={user.fullname}
+                            />
+                            <span className="text-sm text-sand-800 flex-1">@{user.username}</span>
+                            <motion.button
+                              {...springPress}
+                              onClick={() => {
+                                dispatch(inviteCollaborator({ journeyId: id, userId: user._id }));
+                                setInviteQuery("");
+                                setShowInviteDropdown(false);
+                              }}
+                              className="text-xs font-semibold text-ocean-700 bg-ocean-100 hover:bg-ocean-200 px-3 py-1 rounded-full transition-colors"
+                            >
+                              Invite
+                            </motion.button>
+                          </div>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Timeline Zigzag steps list */}
         <div className="max-w-4xl mx-auto px-4 sm:px-6 mt-16 relative">
