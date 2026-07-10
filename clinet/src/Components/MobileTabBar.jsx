@@ -13,6 +13,8 @@ import {
   HiPlus,
   HiOutlineMail,
   HiMail,
+  HiOutlineGlobeAlt,
+  HiGlobeAlt,
 } from "react-icons/hi";
 
 const MobileTabBar = () => {
@@ -36,6 +38,12 @@ const MobileTabBar = () => {
       label: "Search",
       outlineIcon: HiOutlineSearch,
       solidIcon: HiSearch,
+    },
+    {
+      path: "/traveladvisor",
+      label: "Advisor",
+      outlineIcon: HiOutlineGlobeAlt,
+      solidIcon: HiGlobeAlt,
     },
     {
       path: "/story",
@@ -63,7 +71,7 @@ const MobileTabBar = () => {
   ];
 
   return (
-    <div className="md:hidden fixed bottom-0 inset-x-0 z-50 glass-light border-t border-sand-200/80 px-6 pb-5 pt-2 shadow-[0_-8px_30px_rgb(20,41,57,0.06)]">
+    <div className="md:hidden fixed bottom-0 inset-x-0 z-50 glass-light border-t border-sand-200/80 px-3 pb-5 pt-2 shadow-[0_-8px_30px_rgb(20,41,57,0.06)]">
       <div className="flex justify-between items-center relative">
         {tabItems.map((tab, index) => {
           const isActive = location.pathname === tab.path;
@@ -123,7 +131,7 @@ const MobileTabBar = () => {
                 </div>
 
                 <span
-                  className={`text-[10px] mt-1 font-sans font-semibold tracking-tight transition-colors duration-300 ${
+                  className={`text-[9px] mt-1 font-sans font-semibold tracking-tight transition-colors duration-300 ${
                     isActive ? "text-ocean-600" : "text-sand-500"
                   }`}
                 >
