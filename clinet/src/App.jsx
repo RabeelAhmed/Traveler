@@ -131,16 +131,40 @@ function App() {
       dispatch(markConversationRead(conversationId));
     };
 
+    const handleUserWentLive = (data) => {
+      import("./Toolkit/slices/liveSlice").then(({ addLiveUser }) => {
+        dispatch(addLiveUser(data));
+      });
+    };
+
+    const handleLocationUpdated = (data) => {
+      import("./Toolkit/slices/liveSlice").then(({ updateLiveUser }) => {
+        dispatch(updateLiveUser(data));
+      });
+    };
+
+    const handleUserWentOffline = (data) => {
+      import("./Toolkit/slices/liveSlice").then(({ removeLiveUser }) => {
+        dispatch(removeLiveUser(data.userId));
+      });
+    };
+
     socket.on("newNotification", handleNewNotification);
     socket.on("newPost", handleNewPost);
     socket.on("newMessage", handleNewMessage);
     socket.on("messagesRead", handleMessagesRead);
+    socket.on("userWentLive", handleUserWentLive);
+    socket.on("locationUpdated", handleLocationUpdated);
+    socket.on("userWentOffline", handleUserWentOffline);
 
     return () => {
       socket.off("newNotification", handleNewNotification);
       socket.off("newPost", handleNewPost);
       socket.off("newMessage", handleNewMessage);
       socket.off("messagesRead", handleMessagesRead);
+      socket.off("userWentLive", handleUserWentLive);
+      socket.off("locationUpdated", handleLocationUpdated);
+      socket.off("userWentOffline", handleUserWentOffline);
     };
   }, [socket, userId, dispatch]);
 

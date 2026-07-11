@@ -27,6 +27,7 @@ const PostCard = ({ post }) => {
   const isLoggedIn = useSelector((state) => state.appConfig.isLoggedIn);
   const myProfile = useSelector((state) => state.appConfig.myProfile);
   const savedPostIds = useSelector((state) => state.bookmark?.savedPostIds) || [];
+  const liveUsers = useSelector((state) => state.live.liveUsers) || {};
   const isSaved = savedPostIds.includes(post?.id);
 
   const [isLiked, setIsLiked] = useState(post?.isLikedByUser);
@@ -107,11 +108,17 @@ const PostCard = ({ post }) => {
         {/* User Info and Interaction Icons */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-3">
-            <div className="border border-ocean-100 rounded-full p-0.5">
+            <div className="border border-ocean-100 rounded-full p-0.5 relative">
               <ProfileImage
                 userProfileImage={post?.owner?.avatar?.url}
                 userId={post?.owner?._id}
               />
+              {liveUsers[post?.owner?._id] && (
+                <span className="absolute bottom-0.5 right-0.5 flex h-2.5 w-2.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sunset-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-sunset-500 border border-white"></span>
+                </span>
+              )}
             </div>
             <div>
               <p

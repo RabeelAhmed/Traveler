@@ -4,7 +4,7 @@ import { FaHeart, FaComment, FaUserPlus, FaTrophy, FaBellSlash } from "react-ico
 import { MdOutlineRoute, MdOutlineFlag, MdOutlineExplore, MdOutlineGroupAdd, MdOutlineCheck } from "react-icons/md";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import ProfileImage from "./ProfileImage";
 import Header from "./Header";
 import PageTransition from "./PageTransition";
@@ -14,6 +14,7 @@ import { respondToInvite } from "../Toolkit/slices/journeySlice";
 const Notifications = ({ notifications = [] }) => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const liveUsers = useSelector((state) => state.live.liveUsers) || {};
   // Track responded invites: { [notifId]: 'accepted' | 'declined' }
   const [responded, setResponded] = useState({});
 
@@ -157,11 +158,17 @@ const Notifications = ({ notifications = [] }) => {
               >
                 {/* Profile Image with corner indicator badge */}
                 <div className="relative flex-shrink-0">
-                  <div className="border border-sand-100 rounded-full p-0.5 bg-white shadow-sm">
+                  <div className="border border-sand-100 rounded-full p-0.5 bg-white shadow-sm relative">
                     <ProfileImage
                       userProfileImage={notif?.sender?.profilePicture?.url}
                       userId={notif?.sender?._id}
                     />
+                    {notif?.sender?._id && liveUsers[notif.sender._id] && (
+                      <span className="absolute top-0 right-0 flex h-2.5 w-2.5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sunset-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-sunset-500 border border-white"></span>
+                      </span>
+                    )}
                   </div>
                   <motion.div
                     whileHover={{ scale: 1.2 }}

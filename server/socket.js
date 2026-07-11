@@ -1,6 +1,8 @@
 const Notification = require('./Models/notification');
 let ioInstance;
 let onlineUsers = new Map();
+const liveUsers = new Map(); // userId → { lat, lng, username, profilePic, lastSeen }
+
 // Reverse lookup: find userId from socket.id
 const getUserIdBySocketId = (socketId) => {
     for (const [uid, sid] of onlineUsers) { if (sid === socketId) return uid; }
@@ -16,14 +18,46 @@ const initsocket = (io) => {
             console.log(`User ${userId} is online.`);
         })
         socket.on("disconnect",()=>{
+            let keyToRemove = null;
             for(let [key,value] of onlineUsers ){
                 if(value === socket.id){
-                    onlineUsers.delete(key)
+                    keyToRemove = key;
+                    onlineUsers.delete(key);
                     break;
+                }
+            }
+            if (keyToRemove) {
+                if (liveUsers.has(keyToRemove)) {
+                    liveUsers.delete(keyToRemove);
+                    ioInstance.emit('userWentOffline', { userId: keyToRemove });
                 }
             }
             console.log('User disconnected:', socket.id);
         })
+
+        socket.on('goLive', ({ lat, lng, userInfo }) => {
+            const userId = getUserIdBySocketId(socket.id);
+            if (!userId) return;
+            liveUsers.set(userId, { lat, lng, username: userInfo.username,
+                profilePic: userInfo.profilePic, lastSeen: Date.now() });
+            io.emit('userWentLive', { userId, lat, lng,
+                username: userInfo.username, profilePic: userInfo.profilePic });
+        });
+
+        socket.on('updateLocation', ({ lat, lng }) => {
+            const userId = getUserIdBySocketId(socket.id);
+            if (!userId || !liveUsers.has(userId)) return;
+            const existing = liveUsers.get(userId);
+            existing.lat = lat; existing.lng = lng; existing.lastSeen = Date.now();
+            io.emit('locationUpdated', { userId, lat, lng });
+        });
+
+        socket.on('goOffline', () => {
+            const userId = getUserIdBySocketId(socket.id);
+            if (!userId) return;
+            liveUsers.delete(userId);
+            io.emit('userWentOffline', { userId });
+        });
 
         // Direct Messaging Events
         socket.on('sendMessage', ({ recipientId, message }) => {
@@ -98,4 +132,4 @@ const emitMessagesRead = (senderUserId, conversationId) => {
     if (senderSocketId) ioInstance.to(senderSocketId).emit('messagesRead', { conversationId });
 }
 
-module.exports = {initsocket, notify, broadcastNewPost, emitMessagesRead}
+module.exports = { initsocket, notify, broadcastNewPost, emitMessagesRead, liveUsers };

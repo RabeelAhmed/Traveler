@@ -81,6 +81,7 @@ const Profile = () => {
   const isFollowing = useSelector((state) => state.userProfile.isFollowing);
   const savedPosts = useSelector((state) => state.bookmark?.savedPosts) || [];
   const collections = useSelector((state) => state.collection.collections) || [];
+  const liveUsers = useSelector((state) => state.live.liveUsers) || {};
 
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
@@ -189,6 +190,17 @@ const Profile = () => {
                 <p className="font-sans text-sm font-semibold text-sand-400">
                   @{profile?.username}
                 </p>
+                {liveUsers[profile?._id] && (
+                  <div className="flex items-center gap-1.5 pt-1 justify-center md:justify-start">
+                    <span className="relative flex h-2.5 w-2.5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sunset-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-sunset-500"></span>
+                    </span>
+                    <span className="text-[10px] font-black uppercase tracking-wider text-sunset-500 bg-sunset-50 border border-sunset-100 rounded-full px-2.5 py-0.5 shadow-sm">
+                      Live
+                    </span>
+                  </div>
+                )}
                 <p className="font-sans text-xs md:text-sm text-sand-600 max-w-md pt-2 leading-relaxed">
                   {profile?.bio || "No bio yet."}
                 </p>

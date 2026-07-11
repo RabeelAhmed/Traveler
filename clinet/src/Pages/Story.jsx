@@ -12,6 +12,7 @@ import L from "leaflet";
 import Header from "../Components/Header";
 import Logo from "../assets/Images/logoColor.png";
 import { getStoryData, likeAndUnlikeStory } from "../Toolkit/slices/storySlice";
+import { fetchLiveUsers } from "../Toolkit/slices/liveSlice";
 import { springPress, scaleIn, fadeUp } from "../utils/motion";
 
 const Story = () => {
@@ -33,6 +34,13 @@ const Story = () => {
 
   const DURATION_IMAGE = 5000; // 5 seconds for images
 
+  const myProfile = useSelector((state) => state.appConfig.myProfile);
+  const liveUsers = useSelector((state) => state.live.liveUsers);
+
+  const followedLiveUsers = Object.values(liveUsers).filter((u) =>
+    myProfile?.following?.some((f) => (typeof f === "string" ? f === u.userId : f._id === u.userId))
+  );
+
   useEffect(() => {
     navigator.geolocation.getCurrentPosition(
       (position) => {
@@ -49,6 +57,7 @@ const Story = () => {
     if (storyStatus === "idle") {
       dispatch(getStoryData());
     }
+    dispatch(fetchLiveUsers());
   }, [dispatch, storyStatus]);
 
   const activeStory = story[currentIndex];
@@ -224,6 +233,31 @@ const Story = () => {
                 })}
               />
             ))}
+
+            {/* Render live travel presence indicators */}
+            {followedLiveUsers.map((liveUser) => {
+              if (liveUser.lat == null || liveUser.lng == null) return null;
+              return (
+                <Marker
+                  key={`live-${liveUser.userId}`}
+                  position={[liveUser.lat, liveUser.lng]}
+                  icon={L.divIcon({
+                    className: "custom-live-marker-wrapper",
+                    html: `<div class="relative w-11 h-11 flex items-center justify-center">
+                      <div class="absolute w-10 h-10 rounded-full border-2 border-sunset-500 animate-ping opacity-75"></div>
+                      <div class="relative w-9 h-9 border-2 border-sunset-500 rounded-full overflow-hidden bg-white shadow-md flex items-center justify-center z-10">
+                        <img src="${liveUser.profilePic || ''}" alt="${liveUser.username}" class="w-full h-full object-cover rounded-full" />
+                      </div>
+                      <div class="absolute -top-1.5 -right-1.5 bg-sunset-500 text-white font-sans text-[7px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-full border border-white z-20 shadow-sm leading-none">
+                        LIVE
+                      </div>
+                    </div>`,
+                    iconSize: [44, 44],
+                    iconAnchor: [22, 22],
+                  })}
+                />
+              );
+            })}
           </MapContainer>
         </div>
       </div>

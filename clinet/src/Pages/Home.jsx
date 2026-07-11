@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -10,6 +10,9 @@ import {
   HiTrash,
   HiCloud,
 } from "react-icons/hi";
+import { useSocket } from "../context/SocketContext";
+import { setIsLive } from "../Toolkit/slices/liveSlice";
+import toast from "react-hot-toast";
 import Loader from "../Components/Loader";
 import logo from "../assets/Images/traveler_logo_animated.gif";
 import {
@@ -54,10 +57,75 @@ const TempCounter = ({ target }) => {
 };
 
 function Home() {
+  const dispatch = useDispatch();
+  const socket = useSocket();
+  const isLive = useSelector((state) => state.live.isLive);
   const myProfile = useSelector((state) => state.appConfig.myProfile);
   const [currentTime, setCurrentTime] = useState(
     new Date().toLocaleTimeString()
   );
+
+  const watchIdRef = useRef(null);
+  const isLiveRef = useRef(isLive);
+
+  useEffect(() => {
+    isLiveRef.current = isLive;
+  }, [isLive]);
+
+  useEffect(() => {
+    return () => {
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+      }
+    };
+  }, []);
+
+  const handleLiveToggle = () => {
+    if (!isLive) {
+      if (!navigator.geolocation) {
+        toast.error("Geolocation is not supported by your browser");
+        return;
+      }
+      toast.success("Going live...");
+      const watchId = navigator.geolocation.watchPosition(
+        (pos) => {
+          const { latitude: lat, longitude: lng } = pos.coords;
+          if (socket) {
+            if (!isLiveRef.current) {
+              socket.emit("goLive", {
+                lat,
+                lng,
+                userInfo: {
+                  username: myProfile?.username,
+                  profilePic: myProfile?.profilePicture?.url,
+                },
+              });
+              dispatch(setIsLive(true));
+              toast.success("You are now live! 🗺️");
+            } else {
+              socket.emit("updateLocation", { lat, lng });
+            }
+          }
+        },
+        (err) => {
+          console.error(err);
+          toast.error("Failed to get your location");
+        },
+        { enableHighAccuracy: true, maximumAge: 10000 }
+      );
+      watchIdRef.current = watchId;
+    } else {
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+        watchIdRef.current = null;
+      }
+      if (socket) {
+        socket.emit("goOffline");
+      }
+      dispatch(setIsLive(false));
+      toast.success("You are now offline");
+    }
+  };
 
   // States
   const [weatherData, setWeatherData] = useState(null);
@@ -315,24 +383,24 @@ function Home() {
             </motion.div>
           </Link>
 
-          {/* Bento Item 4: Story (Spans 2 columns, visually prominent sunset gradient highlight) */}
-          <Link to="/story" className="block sm:col-span-2 lg:col-span-2">
+          {/* Bento Item 4: Story (Spans 1 column) */}
+          <Link to="/story" className="block sm:col-span-1 lg:col-span-1">
             <motion.div
               variants={fadeUp}
               whileHover={{ y: -4 }}
-              className="relative overflow-hidden bg-gradient-to-br from-sunset-500/80 to-sunset-700/80 backdrop-blur-md border border-sunset-400/20 rounded-3xl p-6 md:p-8 shadow-[0_8px_30px_rgba(241,102,58,0.2)] h-full flex flex-col justify-between cursor-pointer transition-all duration-300 hover:from-sunset-500/90 hover:to-sunset-700/90"
+              className="relative overflow-hidden bg-gradient-to-br from-sunset-500/80 to-sunset-700/80 backdrop-blur-md border border-sunset-400/20 rounded-3xl p-6 shadow-[0_8px_30px_rgba(241,102,58,0.15)] h-full flex flex-col justify-between cursor-pointer transition-all duration-300 hover:from-sunset-500/90 hover:to-sunset-700/90"
             >
               <div>
-                <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center text-white mb-6">
-                  <HiLocationMarker className="text-2xl animate-pulse" />
+                <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center text-white mb-4">
+                  <HiLocationMarker className="text-xl animate-pulse" />
                 </div>
-                <h3 className="font-display font-bold text-2xl text-white mb-2">Travel Stories</h3>
-                <p className="font-sans text-sm text-white/80 leading-relaxed max-w-md">
-                  Explore interactive map-pinned stories from travelers worldwide or create your own journal landmarks.
+                <h3 className="font-display font-bold text-lg text-white mb-1">Travel Stories</h3>
+                <p className="font-sans text-xs text-white/80 leading-relaxed">
+                  Interactive map stories around the world.
                 </p>
               </div>
-              <span className="text-xs text-white/60 font-semibold uppercase tracking-wider mt-6">
-                Most Visited Tool →
+              <span className="text-[10px] text-white/60 font-semibold uppercase tracking-wider mt-4">
+                Explore Map →
               </span>
             </motion.div>
           </Link>
@@ -353,6 +421,42 @@ function Home() {
               </p>
             </motion.div>
           </Link>
+
+          {/* Bento Item 6: Go Live Toggle (1 Column) */}
+          <div className="block sm:col-span-1 lg:col-span-1">
+            <motion.div
+              variants={fadeUp}
+              whileHover={{ y: -4 }}
+              onClick={handleLiveToggle}
+              className={`backdrop-blur-md border rounded-3xl p-6 shadow-lg h-full flex flex-col items-center justify-center cursor-pointer transition-all duration-300 text-center select-none relative overflow-hidden group ${
+                isLive
+                  ? "bg-sunset-500/25 border-sunset-400/50 shadow-[0_8px_30px_rgba(241,102,58,0.25)]"
+                  : "bg-black/30 border-white/10 hover:border-white/20 hover:bg-black/40"
+              }`}
+            >
+              {/* Pulsing glow ring in live mode */}
+              {isLive && (
+                <div className="absolute inset-0 rounded-3xl border-2 border-sunset-500 animate-pulse pointer-events-none" />
+              )}
+              
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-4 transition-all duration-300 ${
+                isLive
+                  ? "bg-sunset-500 text-white shadow-[0_0_15px_rgba(241,102,58,0.5)]"
+                  : "bg-sunset-500/20 text-sunset-400"
+              }`}>
+                <HiLocationMarker className={`text-2xl ${isLive ? "animate-bounce" : ""}`} />
+              </div>
+
+              <h3 className="font-display font-semibold text-lg text-white flex items-center gap-1.5 justify-center">
+                {isLive && <span className="w-2.5 h-2.5 rounded-full bg-sunset-500 animate-ping inline-block" />}
+                {isLive ? "● Live" : "Go Live"}
+              </h3>
+              
+              <p className="font-sans text-xs text-sand-300 mt-1 max-w-[150px]">
+                {isLive ? "Sharing your live travel location." : "Broadcast your travel live to followers."}
+              </p>
+            </motion.div>
+          </div>
 
         </motion.div>
       </div>

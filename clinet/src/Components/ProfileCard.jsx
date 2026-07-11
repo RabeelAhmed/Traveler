@@ -11,6 +11,7 @@ const ProfileCard = ({ user }) => {
   const dispatch = useDispatch();
   const [isFollowing, setIsFollowing] = useState(false);
   const myProfile = useSelector((state) => state.appConfig.myProfile);
+  const liveUsers = useSelector((state) => state.live.liveUsers) || {};
   const [owner, setOwner] = useState(false);
 
   useEffect(() => {
@@ -56,6 +57,17 @@ const ProfileCard = ({ user }) => {
             <p className="font-sans text-xs font-semibold text-sand-400 mt-0.5">
               @{user?.username}
             </p>
+            {liveUsers[user?._id] && (
+              <div className="flex items-center gap-1 mt-1">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sunset-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-sunset-500"></span>
+                </span>
+                <span className="text-[9px] font-black uppercase tracking-wider text-sunset-500 bg-sunset-50 border border-sunset-100 rounded-full px-1.5 py-0.5">
+                  Live
+                </span>
+              </div>
+            )}
           </div>
         </div>
 
