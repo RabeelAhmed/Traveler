@@ -12,7 +12,7 @@
 
 **Traveler** is a MERN stack social network designed for explorers. Share travel posts, upload geo-tagged stories on an interactive map, log multi-step journey trees, and receive AI-powered destination recommendations — all in one platform.
 
-![Landing Page](clinet/docs/screenshots/landing.png)
+![Landing Page](client/docs/screenshots/landing.png)
 
 </div>
 
@@ -65,12 +65,15 @@ Most social platforms treat travel as a secondary activity. Traveler was built f
 | ☁️ **Cloud Media** | Cloudinary integration for optimised image and video hosting |
 | 📱 **Responsive UI** | Mobile-first design with a bottom tab bar for small screens |
 | 🌤️ **Weather Widget** | Live weather data on the home screen powered by OpenWeatherMap |
+| 🔖 **Bookmarks** | Save travel posts, organize them into collections, and manage them under the Saved profile tab |
+| 🤝 **Collab Journeys** | Invite friends to collaborate on active journeys with creator-attributed nodes |
+| 📍 **Live Travel** | Ephemeral, in-memory Socket.io geolocation tracking with pulsing map overlays |
 
 ---
 
 ## 🛠 Tech Stack
 
-### Frontend — `clinet/`
+### Frontend — `client/`
 
 | Technology | Purpose |
 |-----------|---------|
@@ -160,7 +163,7 @@ Most social platforms treat travel as a secondary activity. Traveler was built f
 
 ```
 traveler/
-├── clinet/                          # React + Vite frontend
+├── client/                          # React + Vite frontend
 │   ├── docs/                        # Application screenshots
 │   │   └── screenshots/
 │   ├── src/
@@ -192,7 +195,9 @@ traveler/
 │   │   │       ├── feedSlice.js
 │   │   │       ├── storySlice.js
 │   │   │       ├── journeySlice.js
-│   │   │       └── userProfileSlice.js
+│   │   │       ├── userProfileSlice.js
+│   │   │       ├── bookmarkSlice.js
+│   │   │       └── liveSlice.js
 │   │   ├── utils/
 │   │   │   ├── axiosClient.js
 │   │   │   └── motion.js
@@ -206,7 +211,9 @@ traveler/
 │   │   ├── postController.js
 │   │   ├── storyController.js
 │   │   ├── userController.js
-│   │   └── journeyController.js
+│   │   ├── journeyController.js
+│   │   ├── bookmarkController.js
+│   │   └── liveController.js
 │   ├── Models/
 │   │   ├── User.js
 │   │   ├── post.js
@@ -218,7 +225,8 @@ traveler/
 │   │   ├── postRouter.js
 │   │   ├── storyRouter.js
 │   │   ├── userRouter.js
-│   │   └── journeyRouter.js
+│   │   ├── journeyRouter.js
+│   │   └── liveRouter.js
 │   ├── Middleware/
 │   │   ├── jwtAuthMiddleware.js
 │   │   └── uploads.js
@@ -254,47 +262,47 @@ traveler/
     <td align="center"><strong>Login</strong></td>
   </tr>
   <tr>
-    <td><img src="clinet/docs/screenshots/landing.png" alt="Landing Page" width="450"/></td>
-    <td><img src="clinet/docs/screenshots/login.png" alt="Login" width="450"/></td>
+    <td><img src="client/docs/screenshots/landing.png" alt="Landing Page" width="450"/></td>
+    <td><img src="client/docs/screenshots/login.png" alt="Login" width="450"/></td>
   </tr>
   <tr>
     <td align="center"><strong>Signup</strong></td>
     <td align="center"><strong>Home Feed</strong></td>
   </tr>
   <tr>
-    <td><img src="clinet/docs/screenshots/signup.png" alt="Signup" width="450"/></td>
-    <td><img src="clinet/docs/screenshots/home.png" alt="Home Feed" width="450"/></td>
+    <td><img src="client/docs/screenshots/signup.png" alt="Signup" width="450"/></td>
+    <td><img src="client/docs/screenshots/home.png" alt="Home Feed" width="450"/></td>
   </tr>
   <tr>
     <td align="center"><strong>Travel Forum</strong></td>
     <td align="center"><strong>Story Map</strong></td>
   </tr>
   <tr>
-    <td><img src="clinet/docs/screenshots/forum.png" alt="Forum" width="450"/></td>
-    <td><img src="clinet/docs/screenshots/story_viewer.png" alt="Story Map" width="450"/></td>
+    <td><img src="client/docs/screenshots/forum.png" alt="Forum" width="450"/></td>
+    <td><img src="client/docs/screenshots/story_viewer.png" alt="Story Map" width="450"/></td>
   </tr>
   <tr>
     <td align="center"><strong>Travel Advisor</strong></td>
     <td align="center"><strong>Journey Tree</strong></td>
   </tr>
   <tr>
-    <td><img src="clinet/docs/screenshots/travel_advisor.png" alt="Travel Advisor" width="450"/></td>
-    <td><img src="clinet/docs/screenshots/journey_tree.png" alt="Journey Tree" width="450"/></td>
+    <td><img src="client/docs/screenshots/travel_advisor.png" alt="Travel Advisor" width="450"/></td>
+    <td><img src="client/docs/screenshots/journey_tree.png" alt="Journey Tree" width="450"/></td>
   </tr>
   <tr>
     <td align="center"><strong>Profile & Collections</strong></td>
     <td align="center"><strong>Real-time Notifications</strong></td>
   </tr>
   <tr>
-    <td><img src="clinet/docs/screenshots/profile.png" alt="Profile" width="450"/></td>
-    <td><img src="clinet/docs/screenshots/notifications.png" alt="Notifications" width="450"/></td>
+    <td><img src="client/docs/screenshots/profile.png" alt="Profile" width="450"/></td>
+    <td><img src="client/docs/screenshots/notifications.png" alt="Notifications" width="450"/></td>
   </tr>
   <tr>
     <td align="center"><strong>Direct Messaging</strong></td>
     <td align="center"><strong>-</strong></td>
   </tr>
   <tr>
-    <td><img src="clinet/docs/screenshots/measage.png" alt="Direct Messages" width="450"/></td>
+    <td><img src="client/docs/screenshots/measage.png" alt="Direct Messages" width="450"/></td>
     <td>-</td>
   </tr>
 </table>
@@ -322,7 +330,7 @@ cd Traveler
 
 ```bash
 # Install client dependencies
-npm install --prefix clinet
+npm install --prefix client
 
 # Install server dependencies
 npm install --prefix server
@@ -339,7 +347,7 @@ Copy the example files and fill in your credentials:
 
 ```bash
 cp server/.env.example server/.env
-cp clinet/.env.example clinet/.env
+cp client/.env.example client/.env
 cp agent/.env.example agent/.env
 ```
 
@@ -356,7 +364,7 @@ cp agent/.env.example agent/.env
 | `CLOUDINARY_API_SECRET` | Cloudinary API secret |
 | `RESEND_API_KEY` | Resend API key for transactional emails |
 
-### `clinet/.env`
+### `client/.env`
 
 | Variable | Description |
 |----------|-------------|
@@ -396,7 +404,7 @@ node server.js
 **3. React Client**
 
 ```bash
-cd clinet
+cd client
 npm run dev
 # → Listening on http://localhost:5173
 ```
@@ -457,9 +465,26 @@ Protected routes require a JWT token in the `Authorization: Bearer <token>` head
 | Method | Endpoint | Auth | Description |
 |--------|----------|:----:|-------------|
 | `POST` | `/journey/start` | ✅ | Initialise a new journey |
-| `POST` | `/journey/:id/addstep` | ✅ | Add a travel stop to a journey |
-| `POST` | `/journey/:id/end` | ✅ | Mark a journey as complete |
+| `POST` | `/journey/:id/addstep` | ✅ | Add a travel stop to a journey (or collab) |
+| `POST` | `/journey/:id/end` | ✅ | Mark a journey as complete (owner only) |
+| `GET` | `/journey/collaborating` | ✅ | Get journeys current user is collaborating on |
+| `POST` | `/journey/:id/invite` | ✅ | Invite a user to collaborate |
+| `POST` | `/journey/:id/invite/respond` | ✅ | Accept/decline a collaboration invite |
+| `DELETE` | `/journey/:id/collaborator/:userId` | ✅ | Remove a collaborator |
 | `GET` | `/journey/:id` | Optional | Retrieve a journey with its step tree |
+
+### Bookmarks — `/bookmark`
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|:----:|-------------|
+| `GET` | `/bookmark` | ✅ | Get all posts saved by current user |
+| `POST` | `/bookmark/toggle/:postId` | ✅ | Toggle saved status of a post |
+
+### Live Presence — `/live`
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|:----:|-------------|
+| `GET` | `/live/users` | ✅ | Retrieve all active live travel users |
 
 ### Collections — `/collection`
 
@@ -506,7 +531,7 @@ Protected routes require a JWT token in the `Authorization: Bearer <token>` head
 ```
 username, fullname, email, password (bcrypt), profilePicture { url, publicId },
 bio, koFiUrl, dateOfBirth, posts[], stories[], followers[], following[],
-badges[{ name, awardedAt }], verified, resetPasswordToken, resetPasswordExpires
+savedPosts[] (ref: Post), badges[{ name, awardedAt }], verified, resetPasswordToken, resetPasswordExpires
 ```
 
 ### Post
@@ -524,14 +549,15 @@ likes[], createdAt (TTL index — expires after 24 hours)
 
 ### Journey
 ```
-userId (ref: User), title, description, steps[{ postId, stepIndex, addedAt }],
-startDate, endDate, isCompleted, createdAt
+userId (ref: User), title, description, steps[{ postId, stepIndex, addedAt, addedBy (ref: User) }],
+startDate, endDate, isCompleted, collaborators[] (ref: User), pendingInvites[] (ref: User),
+maxCollaborators, createdAt
 ```
 
 ### Notification
 ```
-userId (ref: User), type (like | comment | follow), fromUser (ref: User),
-postId (ref: Post), isRead, createdAt
+userId (ref: User), type (like | comment | follow | Achievement | Achivement | journey_start | journey_step | journey_complete | story_like | journey_invite | journey_invite_accepted),
+fromUser (ref: User), postId (ref: Post), journeyId (ref: Journey), inviteStatus (pending | accepted | declined), isRead, createdAt
 ```
 
 ### Collection

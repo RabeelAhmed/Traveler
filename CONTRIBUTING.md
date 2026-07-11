@@ -34,11 +34,11 @@ This project follows a standard open-source code of conduct. Be respectful, cons
    ```
 3. **Install dependencies** for all three subsystems:
    ```bash
-   npm install --prefix clinet
+   npm install --prefix client
    npm install --prefix server
    npm install --prefix agent
    ```
-4. **Create a `.env` file** in `server/` and `clinet/` using the provided `.env.example` templates.
+4. **Create a `.env` file** in `server/` and `client/` using the provided `.env.example` templates.
 5. **Run the development servers:**
    ```bash
    # Terminal 1 — Backend
@@ -48,7 +48,7 @@ This project follows a standard open-source code of conduct. Be respectful, cons
    cd agent && node server.js
 
    # Terminal 3 — Frontend
-   cd clinet && npm run dev
+   cd client && npm run dev
    ```
 
 ---
