@@ -182,15 +182,20 @@ function Home() {
         if (navigator.geolocation) {
           navigator.geolocation.getCurrentPosition(
             async (position) => {
-              const { latitude, longitude } = position.coords;
-              const response = await fetch(
-                `https://api.weatherapi.com/v1/current.json?key=${API_KEY}&q=${latitude},${longitude}`
-              );
-              if (!response.ok) throw new Error("Weather API error");
+              try {
+                const { latitude, longitude } = position.coords;
+                const response = await fetch(
+                  `https://api.weatherapi.com/v1/current.json?key=${API_KEY}&q=${latitude},${longitude}`
+                );
+                if (!response.ok) throw new Error("Weather API error");
 
-              const data = await response.json();
-              setWeatherData(data);
-              setLoading(false);
+                const data = await response.json();
+                setWeatherData(data);
+                setLoading(false);
+              } catch (err) {
+                console.error("Weather fetch inside geolocation failed:", err);
+                setLoading(false);
+              }
             },
             (error) => {
               console.error("Geolocation error:", error);
