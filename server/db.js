@@ -14,6 +14,7 @@ async function connectDB() {
     if (URI !== LOCAL_FALLBACK_URI) {
       console.log(`Attempting local MongoDB fallback: ${LOCAL_FALLBACK_URI}`);
       try {
+        await mongoose.disconnect();
         await mongoose.connect(LOCAL_FALLBACK_URI);
       } catch (localErr) {
         console.error("Local Fallback Database Connection Error:", localErr.message);
@@ -30,7 +31,10 @@ db.on('connected',()=>{
     console.log("Connected to MongoDB")
 })
 db.on('error',(err)=>{
-    console.log('Database Connection Error:',err);
+    // Only log active runtime errors if the connection is established to avoid duplicate/confusing boot-up logs
+    if (db.readyState === 1) {
+        console.log('Database Connection Error:', err);
+    }
 })
 db.on('disconnect',()=>{
     console.log("Disconnected from MongoDB")
