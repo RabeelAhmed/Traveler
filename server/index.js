@@ -1,3 +1,16 @@
+// Ensure DNS resolution defaults to public DNS servers and IPv4 first to prevent querySrv ECONNREFUSED with MongoDB Atlas
+const dns = require('dns');
+try {
+  dns.setServers(['8.8.8.8', '1.1.1.1']);
+} catch (err) {
+  console.warn('Warning: Could not set public DNS servers, using default OS resolution:', err.message);
+}
+if (dns.setDefaultResultOrder) {
+  dns.setDefaultResultOrder('ipv4first');
+}
+
+require('dotenv').config();
+
 const express = require('express')
 const dbconnection = require('./db');
 const http = require('http'); // Required for socket.io
@@ -6,7 +19,6 @@ const authentication = require('./Routers/authenticationRouters');
 const morgan = require('morgan');
 const cors = require('cors');
 
-require('dotenv').config()
 dbconnection;
 require('./Utils/cronJobs');
 
