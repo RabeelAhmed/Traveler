@@ -40,23 +40,27 @@ const UploadStory = () => {
     const selectedFile = e.target.files[0];
     if (!selectedFile) return;
 
-    // Validate file type
-    const validTypes = [
-      "image/jpeg",
-      "image/png",
-      "image/gif",
-      "video/mp4",
-      "video/webm",
-    ];
-    if (!validTypes.includes(selectedFile.type)) {
-      toast.error("Please select an image (JPEG, PNG, GIF) or video (MP4, WebM) file.");
+    const allowedImageExts = ['jpg', 'jpeg', 'png', 'webp'];
+    const allowedVideoExts = ['mp4', 'mov', 'webm'];
+    const ext = selectedFile.name.split('.').pop().toLowerCase();
+    const isImage = allowedImageExts.includes(ext);
+    const isVideo = allowedVideoExts.includes(ext);
+
+    if (!isImage && !isVideo) {
+      toast.error("Unsupported file type. Only jpg, jpeg, png, webp images and mp4, mov, webm videos are allowed.");
       return;
     }
 
-    // Validate file size (20MB max)
-    if (selectedFile.size > 20 * 1024 * 1024) {
-      toast.error("File size too large. Maximum 20MB allowed.");
-      return;
+    if (isImage) {
+      if (selectedFile.size > 10 * 1024 * 1024) {
+        toast.error("Image file size too large. Maximum 10MB allowed.");
+        return;
+      }
+    } else {
+      if (selectedFile.size > 100 * 1024 * 1024) {
+        toast.error("Video file size too large. Maximum 100MB allowed.");
+        return;
+      }
     }
 
     if (previewUrl) {
@@ -110,48 +114,22 @@ const UploadStory = () => {
       setProgress(0);
       setLocationError(false);
 
-      // Step 1: Get Cloudinary signature
-      const { data } = await axiosClient.get("/story/generate-signature");
-      const { apiKey, timestamp, signature, cloudName } = data.data;
+      // Upload to backend `/story/upload-media`
+      const formData = new FormData();
+      formData.append("file", file);
 
-      let uploadedUrl = "";
-      let publicId = "";
+      const uploadRes = await axiosClient.post("/story/upload-media", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+        onUploadProgress: (e) => {
+          const percent = Math.round((e.loaded / e.total) * 50);
+          setProgress(percent);
+        },
+      });
 
-      if (cloudName === "dummy" || !cloudName) {
-        setProgress(25);
-        const base64Data = await new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.readAsDataURL(file);
-          reader.onload = () => resolve(reader.result);
-          reader.onerror = (error) => reject(error);
-        });
-        setProgress(50);
-        uploadedUrl = base64Data;
-        publicId = "dummy_story_" + Date.now();
-      } else {
-        // Step 2: Upload to Cloudinary
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("api_key", apiKey);
-        formData.append("timestamp", timestamp);
-        formData.append("signature", signature);
-        formData.append("folder", "Story_Media");
-
-        const cloudinaryRes = await axios.post(
-          `https://api.cloudinary.com/v1_1/${cloudName}/upload`,
-          formData,
-          {
-            onUploadProgress: (e) => {
-              const percent = Math.round((e.loaded / e.total) * 50);
-              setProgress(percent);
-            },
-            timeout: 120000,
-          }
-        );
-
-        uploadedUrl = cloudinaryRes.data.secure_url;
-        publicId = cloudinaryRes.data.public_id;
-      }
+      const uploadedUrl = uploadRes.data.result.url;
+      const publicId = uploadRes.data.result.publicId;
 
       // Step 3: Get user location
       try {

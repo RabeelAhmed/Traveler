@@ -8,6 +8,7 @@ const cors = require('cors');
 
 require('dotenv').config()
 dbconnection;
+require('./Utils/cronJobs');
 
 const app = express()
 const port = process.env.PORT || 3000;

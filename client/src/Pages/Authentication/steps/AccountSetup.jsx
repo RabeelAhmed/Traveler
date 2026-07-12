@@ -7,6 +7,7 @@ import {
   HiCamera,
   HiCheck,
 } from "react-icons/hi";
+import toast from "react-hot-toast";
 import { springPress, scaleIn } from "../../../utils/motion";
 
 const AccountSetup = ({ accountSetupInfo, setAccountSetupInfo }) => {
@@ -29,6 +30,23 @@ const AccountSetup = ({ accountSetupInfo, setAccountSetupInfo }) => {
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
+    if (!file) return;
+
+    const allowedImageExts = ['jpg', 'jpeg', 'png', 'webp'];
+    const ext = file.name.split('.').pop().toLowerCase();
+    
+    if (!allowedImageExts.includes(ext)) {
+      toast.error("Unsupported file type. Only jpg, jpeg, png, webp images are allowed for profile pictures.");
+      e.target.value = "";
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Profile picture size too large. Maximum 10 MB allowed.");
+      e.target.value = "";
+      return;
+    }
+
     setAccountSetupInfo((prevInfo) => ({
       ...prevInfo,
       profilePicture: file,

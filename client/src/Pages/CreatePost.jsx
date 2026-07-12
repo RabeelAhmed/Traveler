@@ -69,17 +69,73 @@ const CreatePost = () => {
 
   const handleImageChange = (e) => {
     const files = Array.from(e.target.files);
-    if (files.length + selectedImages.length > 5) {
-      setErrorMsg("You can only upload a maximum of 5 images.");
-    } else {
-      setErrorMsg("");
-      const newImages = files.map((file) => ({
+    const allowedImageExts = ['jpg', 'jpeg', 'png', 'webp'];
+    const allowedVideoExts = ['mp4', 'mov', 'webm'];
+    
+    // Count existing images and videos
+    let currentImagesCount = selectedImages.filter(img => {
+      const ext = img.file.name.split('.').pop().toLowerCase();
+      return allowedImageExts.includes(ext);
+    }).length;
+
+    let currentVideosCount = selectedImages.filter(img => {
+      const ext = img.file.name.split('.').pop().toLowerCase();
+      return allowedVideoExts.includes(ext);
+    }).length;
+
+    let newImagesCount = 0;
+    let newVideosCount = 0;
+    const validNewFiles = [];
+
+    for (const file of files) {
+      const ext = file.name.split('.').pop().toLowerCase();
+      const isImage = allowedImageExts.includes(ext);
+      const isVideo = allowedVideoExts.includes(ext);
+
+      if (!isImage && !isVideo) {
+        toast.error(`Unsupported file type: ${file.name}. Only jpg, jpeg, png, webp images and mp4, mov, webm videos are allowed.`);
+        return;
+      }
+
+      if (isImage) {
+        if (file.size > 10 * 1024 * 1024) {
+          toast.error(`Image ${file.name} exceeds the 10 MB size limit.`);
+          return;
+        }
+        newImagesCount++;
+      } else {
+        if (file.size > 100 * 1024 * 1024) {
+          toast.error(`Video ${file.name} exceeds the 100 MB size limit.`);
+          return;
+        }
+        newVideosCount++;
+      }
+
+      validNewFiles.push(file);
+    }
+
+    if (currentImagesCount + newImagesCount > 5) {
+      toast.error("You can upload a maximum of 5 images.");
+      return;
+    }
+
+    if (currentVideosCount + newVideosCount > 3) {
+      toast.error("You can upload a maximum of 3 videos.");
+      return;
+    }
+
+    setErrorMsg("");
+    const newItems = validNewFiles.map((file) => {
+      const ext = file.name.split('.').pop().toLowerCase();
+      const isVideo = allowedVideoExts.includes(ext);
+      return {
         file,
         id: `${file.name}-${file.size}-${Math.random()}`,
         preview: URL.createObjectURL(file),
-      }));
-      setSelectedImages((prev) => [...prev, ...newImages]);
-    }
+        isVideo
+      };
+    });
+    setSelectedImages((prev) => [...prev, ...newItems]);
   };
 
   const removeImage = (idToRemove) => {
@@ -92,7 +148,7 @@ const CreatePost = () => {
 
   const handleNext = () => {
     if (step === 0 && selectedImages.length === 0) {
-      toast.error("Please add at least one image.");
+      toast.error("Please add at least one photo or video.");
       return;
     }
     if (step === 1 && (!title.trim() || !desc.trim())) {
@@ -238,35 +294,33 @@ const CreatePost = () => {
                     <p className="font-sans text-[11px] text-sand-400 mt-1">
                       Choose up to 5 photos to share your journey visually.
                     </p>
-                  </div>
-
-                  <label
+                  </div>                   <label
                     htmlFor="file-upload"
                     className="relative w-full h-36 border-2 border-dashed border-sand-300 rounded-2xl cursor-pointer flex flex-col items-center justify-center text-sand-500 hover:border-ocean-400 hover:bg-ocean-50/10 transition-all shadow-sm"
                   >
-                    {selectedImages.length < 5 ? (
+                    {selectedImages.length < 8 ? (
                       <>
                         <FiUpload className="text-3xl mb-2 text-sand-400" />
                         <span className="text-sm font-semibold text-sand-800">
-                          Click to upload images
+                          Click to upload media
                         </span>
                         <span className="text-[10px] text-sand-400 mt-1">
-                          JPEG, PNG formats supported
+                          Images (jpg, jpeg, png, webp) & Videos (mp4, mov, webm) supported
                         </span>
                       </>
                     ) : (
                       <span className="text-sm font-semibold text-sunset-500">
-                        Maximum 5 images reached
+                        Maximum media limit reached
                       </span>
                     )}
                     <input
                       id="file-upload"
                       type="file"
-                      accept="image/*"
+                      accept="image/*,video/*"
                       className="hidden"
                       onChange={handleImageChange}
                       multiple
-                      disabled={selectedImages.length >= 5}
+                      disabled={selectedImages.length >= 8}
                     />
                   </label>
 
@@ -290,18 +344,26 @@ const CreatePost = () => {
                           value={image}
                           className="relative rounded-2xl overflow-hidden border border-sand-100 shadow-sm cursor-grab active:cursor-grabbing bg-white aspect-[16/9] md:aspect-[21/9]"
                         >
-                          <img
-                            src={image.preview}
-                            alt="Selection Preview"
-                            className="object-cover w-full h-full"
-                          />
+                          {image.isVideo ? (
+                            <video
+                              src={image.preview}
+                              className="object-cover w-full h-full"
+                              controls
+                            />
+                          ) : (
+                            <img
+                              src={image.preview}
+                              alt="Selection Preview"
+                              className="object-cover w-full h-full"
+                            />
+                          )}
                           
                           <motion.button
                             {...springPress}
                             type="button"
                             onClick={() => removeImage(image.id)}
                             className="absolute top-2 right-2 bg-white/90 hover:bg-red-50 text-red-500 p-2 rounded-full shadow-md transition-colors z-20"
-                            aria-label="Remove image"
+                            aria-label="Remove item"
                           >
                             <FiX className="text-sm" />
                           </motion.button>

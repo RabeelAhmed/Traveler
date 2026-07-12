@@ -1,10 +1,11 @@
 const router = require('express').Router()
-const {createPost,likeAndUnlikePost,addComment,deleteComment,deletePost,getPost,searchAll, generateSignature, getTrendingDestinations, getTrendingTags} = require('../Controllers/postController')
+const {createPost,likeAndUnlikePost,addComment,deleteComment,deletePost,getPost,searchAll, generateSignature, getTrendingDestinations, getTrendingTags, uploadMediaController} = require('../Controllers/postController')
 const {verifyAuthToken} = require('../Middleware/jwtAuthMiddleware')
-const { multipleUpload } = require('../Middleware/uploads');
+const { upload, multipleUpload } = require('../Middleware/uploads');
 const {optionalAuthToken} = require('../Middleware/jwtAuthMiddleware')
 
 router.post('/createpost',verifyAuthToken,multipleUpload,createPost);
+router.post('/upload-media',verifyAuthToken,upload.array('files', 8),uploadMediaController);
 router.get('/signature',verifyAuthToken,generateSignature);
 router.post('/likepost',verifyAuthToken,likeAndUnlikePost);
 router.post('/addcomment',verifyAuthToken,addComment);

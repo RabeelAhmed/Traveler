@@ -33,10 +33,25 @@ export const ProfileUpdate = () => {
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
-    if (file) {
-      setProfileImage(file);
-      setImagePreview(URL.createObjectURL(file));
+    if (!file) return;
+
+    const allowedImageExts = ['jpg', 'jpeg', 'png', 'webp'];
+    const ext = file.name.split('.').pop().toLowerCase();
+    
+    if (!allowedImageExts.includes(ext)) {
+      toast.error("Unsupported file type. Only jpg, jpeg, png, webp images are allowed.");
+      e.target.value = "";
+      return;
     }
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Profile picture size too large. Maximum 10 MB allowed.");
+      e.target.value = "";
+      return;
+    }
+
+    setProfileImage(file);
+    setImagePreview(URL.createObjectURL(file));
   };
 
   const handleSubmit = async (e) => {

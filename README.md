@@ -381,6 +381,35 @@ cp agent/.env.example agent/.env
 
 ---
 
+## ☁️ Cloudinary Integration & Upload Policy
+
+Traveler is integrated with Cloudinary to host, manage, and optimize all user uploads (profile pictures, travel post media, and stories). Uploads are verified on both the frontend and backend for size, file format, and total item count constraints.
+
+### ⚙️ Required Environment Variables (Backend)
+
+Ensure the following keys are set in `server/.env`:
+* `CLOUDINARY_CLOUD_NAME`: Your Cloudinary Cloud Name.
+* `CLOUDINARY_API_KEY`: Your Cloudinary API Key.
+* `CLOUDINARY_API_SECRET`: Your Cloudinary API Secret.
+
+### 📁 Folders Structure
+All uploads are automatically sorted into specific subfolders in Cloudinary:
+* **Profile Pictures**: `traveler/profile`
+* **Travel Posts**: `traveler/posts`
+* **Stories**: `traveler/stories`
+
+### 🚫 Media Limits & Validation
+
+| Feature | Supported Formats | Size Limit | Count / Mixed Upload Limits |
+| :--- | :--- | :--- | :--- |
+| **Profile Pictures** | Images only (`jpg`, `jpeg`, `png`, `webp`) | Max **10 MB** | Maximum **1** image. Videos are not allowed. |
+| **Travel Posts & Steps** | Mixed: Images (`jpg`, `jpeg`, `png`, `webp`) & Videos (`mp4`, `mov`, `webm`) | Images: Max **10 MB**<br>Videos: Max **100 MB** | Max **5** images and **3** videos per post. Mixed uploads are allowed (e.g., 5 images + 3 videos). |
+| **Stories** | Mixed: Images (`jpg`, `jpeg`, `png`, `webp`) & Videos (`mp4`, `mov`, `webm`) | Images: Max **10 MB**<br>Videos: Max **100 MB** | Max **1** media file per story (either 1 image or 1 video). |
+
+*Unsupported file formats or sizes exceeding these limits are immediately rejected with user-friendly error messages.*
+
+---
+
 ## ▶️ Running the Application
 
 Start all three services in separate terminal windows:

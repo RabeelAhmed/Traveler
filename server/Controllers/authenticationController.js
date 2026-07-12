@@ -3,7 +3,7 @@ const { success, error } = require("../Utils/responseWrapper");
 const { signjwt } = require("../Middleware/jwtAuthMiddleware");
 const mongoose = require("mongoose");
 const { mapPostOutput } = require("../Utils/utils");
-const cloudinary = require("../Utils/cloudinaryConfig");
+const { cloudinary, uploadToCloudinary, validateFile } = require("../Utils/cloudinaryConfig");
 const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const { Resend } = require("resend");
@@ -94,6 +94,41 @@ const generateProfilePicSignature = (req, res) => {
   });
 };
 
+const uploadProfilePicController = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json(error(400, "No profile picture file provided."));
+    }
+
+    // Backend validation (only image allowed, max 10MB)
+    const fileType = validateFile(req.file);
+    if (fileType !== "image") {
+      return res.status(400).json(error(400, "Videos are not allowed for profile pictures."));
+    }
+
+    // Check if cloud configuration is dummy or missing (local development bypass/fallback)
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME || process.env.CLOUD_NAME;
+    if (cloudName === "dummy" || !cloudName) {
+      const mimeType = req.file.mimetype || "image/jpeg";
+      const base64Data = `data:${mimeType};base64,${req.file.buffer.toString("base64")}`;
+      return res.status(200).json({
+        secure_url: base64Data,
+        public_id: "dummy_profile_pic_" + Date.now(),
+      });
+    }
+
+    // Upload to Cloudinary
+    const result = await uploadToCloudinary(req.file.buffer, "traveler/profile", req.file.mimetype);
+    return res.status(200).json({
+      secure_url: result.url,
+      public_id: result.publicId,
+    });
+  } catch (err) {
+    console.error("uploadProfilePicController error:", err);
+    return res.status(400).json(error(400, err.message));
+  }
+};
+
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -170,30 +205,44 @@ const updateProfile = async (req, res) => {
 
     // Handle profile picture update
     if (req.file) {
-      if (process.env.CLOUD_NAME === "dummy" || !process.env.CLOUD_NAME) {
+      // Backend validation
+      const fileType = validateFile(req.file);
+      if (fileType !== "image") {
+        return res.send(error(400, "Videos are not allowed for profile pictures."));
+      }
+
+      // Find the user to get current profile picture
+      const existingUser = await user.findById(userId);
+      if (existingUser && existingUser.profilePicture && existingUser.profilePicture.publicId) {
+        // Delete old profile picture from Cloudinary
+        const cloudName = process.env.CLOUDINARY_CLOUD_NAME || process.env.CLOUD_NAME;
+        if (cloudName && cloudName !== "dummy") {
+          try {
+            await cloudinary.uploader.destroy(existingUser.profilePicture.publicId, { resource_type: "image" });
+            console.log(`Deleted old profile picture from Cloudinary: ${existingUser.profilePicture.publicId}`);
+          } catch (err) {
+            console.error(`Failed to delete old profile picture ${existingUser.profilePicture.publicId} from Cloudinary:`, err);
+          }
+        }
+      }
+
+      const cloudName = process.env.CLOUDINARY_CLOUD_NAME || process.env.CLOUD_NAME;
+      if (cloudName === "dummy" || !cloudName) {
         const mimeType = req.file.mimetype || "image/jpeg";
         const base64Data = `data:${mimeType};base64,${req.file.buffer.toString("base64")}`;
         updateFields.profilePicture = {
-          public_id: "dummy_profile_pic_" + Date.now(),
-          url: base64Data
+          publicId: "dummy_profile_pic_" + Date.now(),
+          url: base64Data,
+          resourceType: "image"
         };
       } else {
-        // Upload new image to Cloudinary
-        const uploadPromise = new Promise((resolve, reject) => {
-          const stream = cloudinary.uploader.upload_stream(
-            { folder: "Profile_Pictures" },
-            (error, result) => {
-              if (error) {
-                return reject({ message: "Upload to Cloudinary failed", error });
-              }
-              resolve({ public_id: result.public_id, url: result.secure_url });
-            }
-          );
-          stream.end(req.file.buffer);
-        });
-
-        const CloudImg = await uploadPromise;
-        updateFields.profilePicture = CloudImg;
+        // Upload new image to Cloudinary folder traveler/profile
+        const result = await uploadToCloudinary(req.file.buffer, "traveler/profile", req.file.mimetype);
+        updateFields.profilePicture = {
+          publicId: result.publicId,
+          url: result.url,
+          resourceType: result.resourceType
+        };
       }
     }
 
@@ -287,6 +336,7 @@ module.exports = {
   getProfile,
   updateProfile,
   generateProfilePicSignature,
+  uploadProfilePicController,
   forgotPassword,
   resetPassword,
 };

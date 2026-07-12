@@ -53,6 +53,10 @@ const postSchema = new Schema({
       publicId: {
         type: String, // If using a media storage service like Cloudinary
       },
+      resourceType: {
+        type: String, // 'image' or 'video'
+        default: 'image'
+      }
     },
   ],
   tags: [
@@ -91,6 +95,28 @@ const postSchema = new Schema({
       },
     },
   ],
+});
+
+postSchema.pre("findOneAndDelete", async function (next) {
+  try {
+    const doc = await this.model.findOne(this.getQuery());
+    if (doc && doc.media && doc.media.length > 0) {
+      const { cloudinary } = require("../Utils/cloudinaryConfig");
+      for (const item of doc.media) {
+        if (item.publicId) {
+          try {
+            await cloudinary.uploader.destroy(item.publicId, { resource_type: item.resourceType || "image" });
+            console.log(`Successfully deleted post media from Cloudinary: ${item.publicId}`);
+          } catch (err) {
+            console.error(`Failed to delete Cloudinary asset ${item.publicId} on post delete:`, err);
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.error("Error in Post findOneAndDelete middleware:", error);
+  }
+  next();
 });
 
 module.exports = mongoose.model("Post", postSchema);

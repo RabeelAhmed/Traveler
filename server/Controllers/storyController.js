@@ -4,7 +4,7 @@ const mongoose = require("mongoose");
 const { success, error } = require("../Utils/responseWrapper");
 const { mapPostOutput, mapStoryOutput } = require("../Utils/utils");
 const express = require("express");
-const cloudinary = require("../Utils/cloudinaryConfig");
+const { cloudinary, uploadToCloudinary, validateFile } = require("../Utils/cloudinaryConfig");
 const dotenv = require("dotenv");
 const Notification = require("../Models/notification");
 const Story = require("../Models/story");
@@ -124,6 +124,40 @@ const addStory = async (req, res) => {
   }
 };
 
+const uploadStoryMediaController = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.send(error(400, "No file provided for story media."));
+    }
+
+    // Backend validation: 1 file, image (<=10MB) or video (<=100MB)
+    const resourceType = validateFile(req.file);
+
+    // Check cloudName bypass
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME || process.env.CLOUD_NAME;
+    if (cloudName === "dummy" || !cloudName) {
+      const mimeType = req.file.mimetype || (resourceType === 'image' ? 'image/jpeg' : 'video/mp4');
+      const base64Data = `data:${mimeType};base64,${req.file.buffer.toString("base64")}`;
+      return res.send(success(200, {
+        url: base64Data,
+        publicId: "dummy_story_" + Date.now(),
+        resourceType
+      }));
+    }
+
+    // Upload to traveler/stories folder
+    const result = await uploadToCloudinary(req.file.buffer, "traveler/stories", req.file.mimetype);
+    return res.send(success(200, {
+      url: result.url,
+      publicId: result.publicId,
+      resourceType: result.resourceType
+    }));
+  } catch (err) {
+    console.error("uploadStoryMediaController error:", err);
+    return res.send(error(400, err.message));
+  }
+};
+
 const generateSignature = (req, res) => {
   try {
     const timestamp = Math.round(Date.now() / 1000);
@@ -237,4 +271,4 @@ const likeAndUnlikeStory = async (req, res) => {
 
 
 
-module.exports = { addStory,generateSignature,getStory,likeAndUnlikeStory };
+module.exports = { addStory,generateSignature,getStory,likeAndUnlikeStory,uploadStoryMediaController };

@@ -35,6 +35,10 @@ const userSchema = new Schema({
       type: String,
       default: "https://res.cloudinary.com/djiqzvcev/image/upload/v1729021294/blank-profile-picture-973460_1280_kwgltq.png", // Default profile picture URL
     },
+    resourceType: {
+      type: String,
+      default: "image",
+    },
   },
   bio: {
     type: String,

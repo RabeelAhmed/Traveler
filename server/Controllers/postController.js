@@ -3,7 +3,7 @@ const user = require("../Models/User");
 const mongoose = require("mongoose");
 const { success, error } = require("../Utils/responseWrapper");
 const { mapPostOutput } = require("../Utils/utils");
-const cloudinary = require("../Utils/cloudinaryConfig");
+const { cloudinary, uploadToCloudinary, validateFile } = require("../Utils/cloudinaryConfig");
 const Notification = require("../Models/notification");
 const { notify, broadcastNewPost } = require("../socket");
 const createPost = async (req, res) => {
@@ -90,6 +90,71 @@ const createPost = async (req, res) => {
   } catch (err) {
     console.error("CreatePost Error:", err);
     return res.send(error(500, "Something went wrong"));
+  }
+};
+
+const uploadMediaController = async (req, res) => {
+  try {
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json(error(400, "No media files provided."));
+    }
+
+    let imageCount = 0;
+    let videoCount = 0;
+    const filesToUpload = [];
+
+    // Validate all files first
+    for (const file of req.files) {
+      const resourceType = validateFile(file);
+      if (resourceType === 'image') {
+        imageCount++;
+      } else {
+        videoCount++;
+      }
+      filesToUpload.push({ file, resourceType });
+    }
+
+    if (imageCount > 5) {
+      return res.status(400).json(error(400, "Maximum 5 images allowed."));
+    }
+    if (videoCount > 3) {
+      return res.status(400).json(error(400, "Maximum 3 videos allowed."));
+    }
+
+    // Check cloudName bypass
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME || process.env.CLOUD_NAME;
+    const media = [];
+
+    if (cloudName === "dummy" || !cloudName) {
+      // Local dev/bypass mode
+      for (const item of filesToUpload) {
+        const mimeType = item.file.mimetype || (item.resourceType === 'image' ? 'image/jpeg' : 'video/mp4');
+        const base64Data = `data:${mimeType};base64,${item.file.buffer.toString("base64")}`;
+        media.push({
+          url: base64Data,
+          publicId: "dummy_post_media_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5),
+          resourceType: item.resourceType
+        });
+      }
+    } else {
+      // Upload to Cloudinary
+      const uploadPromises = filesToUpload.map(item => 
+        uploadToCloudinary(item.file.buffer, "traveler/posts", item.file.mimetype)
+      );
+      const results = await Promise.all(uploadPromises);
+      for (const resItem of results) {
+        media.push({
+          url: resItem.url,
+          publicId: resItem.publicId,
+          resourceType: resItem.resourceType
+        });
+      }
+    }
+
+    return res.send(success(200, { media }));
+  } catch (err) {
+    console.error("uploadMediaController error:", err);
+    return res.send(error(400, err.message));
   }
 };
 
@@ -497,6 +562,7 @@ module.exports = {
   getPost,
   searchAll,
   generateSignature,
+  uploadMediaController,
   getTrendingDestinations,
   getTrendingTags,
 };
