@@ -13,7 +13,6 @@ require('dotenv').config();
 
 // ── Environment Validation ──
 const requiredEnvVars = [
-  'MONGO_URI',
   'JWT_SECRET',
   'CLOUDINARY_CLOUD_NAME',
   'CLOUDINARY_API_KEY',
@@ -22,6 +21,10 @@ const requiredEnvVars = [
 ];
 
 const missingEnvVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
+if (!process.env.MONGO_URI && !process.env.URI) {
+  missingEnvVars.push('MONGO_URI or URI');
+}
+
 if (missingEnvVars.length > 0) {
   console.error('Fatal Startup Error: Missing required environment variables:', missingEnvVars.join(', '));
   process.exit(1);

@@ -11,7 +11,7 @@ if (dns.setDefaultResultOrder) {
   dns.setDefaultResultOrder('ipv4first');
 }
 
-const URI = process.env.MONGO_URI || process.env.URI;
+const URI = process.env.URI || process.env.MONGO_URI;
 
 const connectionOptions = {
   autoIndex: true
