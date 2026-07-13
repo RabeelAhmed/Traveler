@@ -8,6 +8,7 @@ const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const { Resend } = require("resend");
 const resend = new Resend(process.env.RESEND_API_KEY);
+const getResetPasswordEmail = require("../Utils/emailTemplates/resetPassword");
 const signup = async (req, res) => {
   try {
     const {
@@ -290,11 +291,7 @@ const forgotPassword = async (req, res) => {
       from: "no-reply@resend.dev",
       to: email,
       subject: "Password Reset Request",
-      html: `
-        <p>You requested a password reset. Click the link below:</p>
-        <a href="${resetUrl}">Reset Password</a>
-        <p>This link expires in 1 hour.</p>
-      `,
+      html: getResetPasswordEmail(resetUrl, userProfile.fullname),
     });
 
     res.status(200).json({ message: "Reset link sent to email!" });

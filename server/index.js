@@ -62,9 +62,13 @@ app.use('/collection', collectionRouter)
 app.use('/message', messageRouter)
 app.use('/review', reviewRouter)
 app.use('/live', liveRouter)
-app.get('/', (req, res) => {
-  res.send('Hello World!')
-})
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+  });
+});
 
 server.listen(port, () => {
   console.log(`Example app listening on port ${port}`)
