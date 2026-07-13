@@ -11,11 +11,7 @@ if (dns.setDefaultResultOrder) {
   dns.setDefaultResultOrder('ipv4first');
 }
 
-const URI_VAR_NAME = 'URI';
-const URI = process.env[URI_VAR_NAME];
-
-const LOCAL_FALLBACK_VAR_NAME = 'MONGO_URI';
-const LOCAL_FALLBACK_URI = process.env[LOCAL_FALLBACK_VAR_NAME];
+const URI = process.env.MONGO_URI || process.env.URI;
 
 const connectionOptions = {
   autoIndex: true
@@ -23,33 +19,18 @@ const connectionOptions = {
 
 async function connectDB() {
   if (!URI) {
-    console.error(`Database Connection Error: Environment variable '${URI_VAR_NAME}' is not defined.`);
+    console.error("Database Connection Error: Neither 'MONGO_URI' nor 'URI' is defined in the environment.");
     return;
   }
 
   const maskedURI = URI.includes('@') ? URI.replace(/:[^@]+@/, ':****@') : URI;
-  console.log(`Attempting to connect to MongoDB using variable '${URI_VAR_NAME}': ${maskedURI}`);
-  console.log('Connection options used:', JSON.stringify(connectionOptions, null, 2));
+  console.log(`Attempting to connect to MongoDB: ${maskedURI}`);
 
   try {
     await mongoose.connect(URI, connectionOptions);
   } catch (err) {
-    console.error(`Primary Database Connection Error (read from '${URI_VAR_NAME}'):`, err.message);
+    console.error("Database Connection Error:", err.message);
     console.error("Full stack trace:\n", err.stack);
-
-    if (LOCAL_FALLBACK_URI && URI !== LOCAL_FALLBACK_URI) {
-      const maskedFallback = LOCAL_FALLBACK_URI.includes('@') ? LOCAL_FALLBACK_URI.replace(/:[^@]+@/, ':****@') : LOCAL_FALLBACK_URI;
-      console.log(`Attempting local MongoDB fallback using variable '${LOCAL_FALLBACK_VAR_NAME}': ${maskedFallback}`);
-      try {
-        await mongoose.disconnect();
-        await mongoose.connect(LOCAL_FALLBACK_URI, connectionOptions);
-      } catch (localErr) {
-        console.error(`Local Fallback Database Connection Error (read from '${LOCAL_FALLBACK_VAR_NAME}'):`, localErr.message);
-        console.error("Local Fallback stack trace:\n", localErr.stack);
-      }
-    } else {
-      console.log(`No fallback attempted: '${LOCAL_FALLBACK_VAR_NAME}' environment variable is not defined or matches primary URI.`);
-    }
   }
 }
 
@@ -58,7 +39,7 @@ connectDB();
 const db = mongoose.connection;
 
 db.on('connected',()=>{
-    console.log("Connected to MongoDB")
+    console.log("✓ MongoDB Connected")
 })
 db.on('error',(err)=>{
     // Only log active runtime errors if the connection is established to avoid duplicate/confusing boot-up logs
