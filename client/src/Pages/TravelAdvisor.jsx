@@ -10,6 +10,7 @@ import MoreInfoModal from "../Components/MoreInfoModel";
 import { toast } from "react-hot-toast";
 import PageTransition from "../Components/PageTransition";
 import { springPress, scaleIn, fadeUp, staggerContainer } from "../utils/motion";
+import agentClient from "../utils/agentClient";
 
 const ADVISOR_APP_SERVER_BASE_URL = import.meta.env.VITE_TRAVEL_ADVISOR_BASE_URL;
 
@@ -130,15 +131,18 @@ const TravelAdvisor = () => {
 
     setLoading(true);
     try {
-      const response = await fetch(
-        `${ADVISOR_APP_SERVER_BASE_URL}/recommend?district=${encodeURIComponent(
+      const response = await agentClient.get(
+        `/recommend?district=${encodeURIComponent(
           province
-        )}&category=${encodeURIComponent(destinationType)}`
+        )}&category=${encodeURIComponent(destinationType)}`,
+        {
+          validateStatus: (status) => status >= 200 && status < 500
+        }
       );
 
-      const data = await response.json();
+      const data = response.data;
 
-      if (!response.ok) {
+      if (response.status !== 200) {
         if (data.error === "Invalid district") {
           toast.error("Invalid district");
         } else if (data.error === "Invalid category") {
