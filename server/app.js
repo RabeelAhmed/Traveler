@@ -50,28 +50,49 @@ const app = express();
 const origin_env = process.env.ORIGIN;
 
 const allowedOrigins = [
-  origin_env,
   'http://localhost:5173',
   'http://127.0.0.1:5173',
-].filter(Boolean);
+  'https://traveler-social.netlify.app',
+];
+
+if (origin_env && !allowedOrigins.includes(origin_env)) {
+  allowedOrigins.push(origin_env);
+}
+
+// Log allowed origins on startup
+console.log('✓ Allowed CORS Origins:', allowedOrigins.concat(['https://*.netlify.app']));
 
 const checkOrigin = (origin, callback) => {
-  if (
-    !origin ||
-    allowedOrigins.includes(origin) ||
-    origin.startsWith('http://localhost:') ||
-    origin.startsWith('http://127.0.0.1:')
-  ) {
+  if (!origin) {
+    return callback(null, true);
+  }
+
+  // Check exact matches in whitelist, wildcards for Netlify apps, and localhost ports
+  const isAllowed = allowedOrigins.includes(origin) ||
+    /^https:\/\/[a-zA-Z0-9-_\.]+\.netlify\.app$/.test(origin) ||
+    /^http:\/\/localhost:\d+$/.test(origin) ||
+    /^http:\/\/127\.0\.0\.1:\d+$/.test(origin);
+
+  if (isAllowed) {
     callback(null, true);
   } else {
-    callback(new Error('Not allowed by CORS'));
+    console.warn(`[CORS Blocked] Request from origin ${origin} blocked by CORS policy.`);
+    callback(new Error(`Origin ${origin} not allowed by CORS`));
   }
+};
+
+const corsOptions = {
+  credentials: true,
+  origin: checkOrigin,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 };
 
 // ── Middlewares ──
 app.use(helmet());
 app.use(compression());
-app.use(cors({ credentials: true, origin: checkOrigin }));
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
 
 const morganFormat = process.env.NODE_ENV === 'production' ? 'tiny' : 'common';
 app.use(morgan(morganFormat));
