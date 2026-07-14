@@ -11,7 +11,7 @@ const verifyAuthToken = (req,res,next) =>{
       }
       const token = req.headers.authorization.split(" ")[1];
     try {
-        const decoded = jwt.verify(token, process.env.SECRET_KEY);
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || process.env.SECRET_KEY);
         req.user = decoded;
         console.log('After Verification');
         next();
@@ -20,7 +20,7 @@ const verifyAuthToken = (req,res,next) =>{
     }
 }
 const signjwt = (user_Id) =>{
-    return jwt.sign({user_Id},process.env.SECRET_KEY)
+    return jwt.sign({user_Id}, process.env.JWT_SECRET || process.env.SECRET_KEY)
 }
 
 
@@ -30,7 +30,7 @@ const optionalAuthToken = (req, res, next) => {
   if (authHeader && authHeader.startsWith("Bearer")) {
     const token = authHeader.split(" ")[1];
     try {
-      const decoded = jwt.verify(token, process.env.SECRET_KEY);
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || process.env.SECRET_KEY);
       req.user = decoded; // Add user if token is valid
     } catch (err) {
       console.warn("Invalid token in optionalAuthToken:", err.message);

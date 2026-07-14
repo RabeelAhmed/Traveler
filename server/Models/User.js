@@ -112,7 +112,7 @@ userSchema.pre('save',async function (next){
       user.password = hash;
       next();
   } catch (error) {
-      next(err);
+      next(error);
   }
   
 })

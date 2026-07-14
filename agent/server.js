@@ -4,7 +4,27 @@ const fs = require('fs');
 const path = require('path');
 
 const app = express();
-app.use(cors());
+
+const allowedOrigins = [
+  'https://traveler-social.netlify.app',
+  'http://localhost:5173',
+  'http://127.0.0.1:5173'
+];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin) || 
+        /^https:\/\/[a-zA-Z0-9-_\.]+\.netlify\.app$/.test(origin) ||
+        /^http:\/\/localhost:\d+$/.test(origin) ||
+        /^http:\/\/127\.0\.0\.1:\d+$/.test(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true
+}));
+
 app.use(express.json());
 
 const CSV_PATH = path.join(__dirname, 'Tourist Destinations.csv');
@@ -139,6 +159,10 @@ app.get('/recommend/geo', (req, res) => {
 });
 
 const port = process.env.PORT || 5001;
-app.listen(port, () => {
-  console.log(`Travel Advisor Mock Engine listening on port ${port}`);
-});
+if (!process.env.VERCEL) {
+  app.listen(port, () => {
+    console.log(`Travel Advisor Mock Engine listening on port ${port}`);
+  });
+}
+
+module.exports = app;
