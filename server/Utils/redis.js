@@ -3,25 +3,31 @@
  *
  * Singleton Upstash Redis client.
  * Uses @upstash/redis (HTTP REST) — compatible with Vercel serverless.
- * Falls back gracefully if env vars are missing.
+ *
+ * Supports two env var naming conventions:
+ *   1. Vercel KV integration:  KV_REST_API_URL + KV_REST_API_TOKEN
+ *   2. Manual Upstash setup:   UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN
+ *
+ * Falls back gracefully (cache disabled) if neither set is present.
  */
 
 const { Redis } = require('@upstash/redis');
 
 let redis = null;
 
-if (
-  process.env.UPSTASH_REDIS_REST_URL &&
-  process.env.UPSTASH_REDIS_REST_TOKEN
-) {
+// Resolve URL — prefer Vercel KV naming, fall back to manual naming
+const redisUrl   = process.env.KV_REST_API_URL   || process.env.UPSTASH_REDIS_REST_URL;
+const redisToken = process.env.KV_REST_API_TOKEN  || process.env.UPSTASH_REDIS_REST_TOKEN;
+
+if (redisUrl && redisToken) {
   redis = new Redis({
-    url:   process.env.UPSTASH_REDIS_REST_URL,
-    token: process.env.UPSTASH_REDIS_REST_TOKEN,
+    url:   redisUrl,
+    token: redisToken,
   });
-  console.log('✓ Redis (Upstash) Configured');
+  console.log('✓ Redis (Upstash) Configured —', redisUrl);
 } else {
   console.warn(
-    '[Redis] UPSTASH_REDIS_REST_URL or UPSTASH_REDIS_REST_TOKEN not set — cache disabled, falling back to MongoDB only.'
+    '[Redis] No Upstash credentials found (KV_REST_API_URL/TOKEN or UPSTASH_REDIS_REST_URL/TOKEN). Cache disabled — falling back to MongoDB only.'
   );
 }
 
