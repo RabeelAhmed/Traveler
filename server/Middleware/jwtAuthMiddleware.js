@@ -16,7 +16,7 @@ const verifyAuthToken = (req,res,next) =>{
         console.log('After Verification');
         next();
     } catch (err) {
-        return res.send(error(401,err));
+        return res.send(error(401, err.message));
     }
 }
 const signjwt = (user_Id) =>{

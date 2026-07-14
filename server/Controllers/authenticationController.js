@@ -149,7 +149,7 @@ const login = async (req, res) => {
     const token = signjwt(userExisted._id);
     return res.send(success(200, { token }));
   } catch (err) {
-    return res.send(error(400, err));
+    return res.send(error(400, err.message));
   }
 };
 

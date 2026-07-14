@@ -160,7 +160,7 @@ const getFeedData = async (req, res) => {
     return res.send(success(200, posts));
   } catch (err) {
     // If an error occurs, send a 500 error response
-    return res.send(error(500, err));
+    return res.send(error(500, err.message));
   }
 };
 

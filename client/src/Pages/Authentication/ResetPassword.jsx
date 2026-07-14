@@ -40,11 +40,9 @@ function ResetPassword() {
       }
     } catch (err) {
       console.log(err);
-      if (err.response && err.response.data?.error) {
-        toast.error(err.response.data.error);
-      } else {
-        toast.error("Failed to reset password. Please try again.");
-      }
+      const rawError = err.response?.data?.message || err.response?.data?.error || err.message || err;
+      const errorMsg = typeof rawError === "object" ? (rawError.message || JSON.stringify(rawError)) : rawError;
+      toast.error(errorMsg || "Failed to reset password. Please try again.");
     } finally {
       setIsResetting(false);
     }

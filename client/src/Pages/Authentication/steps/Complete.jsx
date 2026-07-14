@@ -59,9 +59,9 @@ const Complete = ({ accountSetupInfo, accountInfo }) => {
       }
     } catch (err) {
       console.error(err);
-      toast.error(
-        err.response?.data?.error?.message || "An error occurred during sign-up"
-      );
+      const rawError = err.response?.data?.message || err.response?.data?.error || err.message || err;
+      const errorMsg = typeof rawError === "object" ? (rawError.message || JSON.stringify(rawError)) : rawError;
+      toast.error(errorMsg || "An error occurred during sign-up");
     } finally {
       setLoading(false);
     }
