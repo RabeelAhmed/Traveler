@@ -1,6 +1,7 @@
 const User = require("../Models/User");
 const { mapPostOutput } = require("../Utils/utils");
 const { success, error } = require("../Utils/responseWrapper");
+const { deleteCache } = require("../Utils/cache");
 
 const toggleBookmark = async (req, res) => {
   try {
@@ -26,6 +27,10 @@ const toggleBookmark = async (req, res) => {
     }
 
     await curUser.save();
+
+    // ── Cache Invalidation ──────────────────────────────────────────────────
+    await deleteCache(`profile:${curUserId}`);
+
     return res.status(200).send(
       success(200, {
         isSaved,

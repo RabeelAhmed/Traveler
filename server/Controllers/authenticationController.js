@@ -9,6 +9,8 @@ const jwt = require("jsonwebtoken");
 const { Resend } = require("resend");
 const resend = new Resend(process.env.RESEND_API_KEY);
 const getResetPasswordEmail = require("../Utils/emailTemplates/resetPassword");
+const { remember, deleteCache, TTL } = require("../Utils/cache");
+
 const signup = async (req, res) => {
   try {
     const {
@@ -156,40 +158,37 @@ const login = async (req, res) => {
 const getProfile = async (req, res) => {
   try {
     const user_Id = req.user.user_Id;
-    // Find the user by ID
-    const userProfile = await user.findById(user_Id);
+    const cacheKey = `profile:${user_Id}`;
 
-    // If user profile not found, return a 404 error
-    if (!userProfile) {
+    const cached = await remember(cacheKey, TTL.PROFILE, async () => {
+      const userProfile = await user.findById(user_Id);
+      if (!userProfile) return null;
+
+      const allPosts = await userProfile.populate({
+        path: "posts",
+        populate: [
+          { path: "userId" },
+          { path: "comments", populate: { path: "userId", select: "fullname profilePicture" } },
+        ],
+      });
+
+      const posts = allPosts?.posts
+        ?.map((item) => mapPostOutput(item, user_Id))
+        .reverse();
+
+      return { userProfile, posts };
+    });
+
+    if (!cached) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Populate the posts with the 'userId' field data
-    const allPosts = await userProfile.populate({
-      path: "posts", // Assuming 'posts' is an array of post references in the user model
-      populate: [
-        {
-          path: "userId", // Assuming each post has a 'userId' field that you want to populate
-        },
-        {
-          path: "comments",
-          populate: { path: "userId", select: "fullname profilePicture" }, // Assuming 'comments' is another field to populate
-        },
-      ],
-    });
-
-    const posts = allPosts?.posts
-      ?.map((item) => mapPostOutput(item, req._id))
-      .reverse();
-    // Log populated user profile (you can modify this or remove it later)
-    // Return the user profile and posts
     return res.status(200).json({
       success: true,
-      data: { userProfile, posts },
+      data: { userProfile: cached.userProfile, posts: cached.posts },
     });
   } catch (err) {
     console.error(err);
-    // Handle errors
     return res.status(500).json({
       success: false,
       message: "Server error",
@@ -255,6 +254,9 @@ const updateProfile = async (req, res) => {
     if (!updatedUser) {
       return res.send(error(404, "User not found"));
     }
+
+    // ── Cache Invalidation ──────────────────────────────────────────────────
+    await deleteCache(`profile:${userId}`);
 
     return res.send(
       success(200, { message: "Profile updated successfully", updatedUser })

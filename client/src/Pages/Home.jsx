@@ -56,6 +56,36 @@ const TempCounter = ({ target }) => {
   return <span>{count}</span>;
 };
 
+const weatherCodesMap = {
+  0: { text: "Unknown", icon: "❓" },
+  1000: { text: "Clear, Sunny", icon: "☀️" },
+  1100: { text: "Mostly Clear", icon: "🌤️" },
+  1101: { text: "Partly Cloudy", icon: "⛅" },
+  1102: { text: "Mostly Cloudy", icon: "🌥️" },
+  1001: { text: "Cloudy", icon: "☁️" },
+  2000: { text: "Fog", icon: "🌫️" },
+  2100: { text: "Light Fog", icon: "🌫️" },
+  3000: { text: "Light Wind", icon: "🍃" },
+  3001: { text: "Windy", icon: "💨" },
+  3002: { text: "Strong Wind", icon: "🌬️" },
+  4000: { text: "Drizzle", icon: "🌧️" },
+  4001: { text: "Rain", icon: "🌧️" },
+  4200: { text: "Light Rain", icon: "🌦️" },
+  4201: { text: "Heavy Rain", icon: "⛈️" },
+  5000: { text: "Snow", icon: "❄️" },
+  5001: { text: "Flurries", icon: "❄️" },
+  5100: { text: "Light Snow", icon: "🌨️" },
+  5101: { text: "Heavy Snow", icon: "🌨️" },
+  6000: { text: "Freezing Drizzle", icon: "🌨️" },
+  6001: { text: "Freezing Rain", icon: "🌨️" },
+  6200: { text: "Light Freezing Rain", icon: "🌨️" },
+  6201: { text: "Heavy Freezing Rain", icon: "🌨️" },
+  7000: { text: "Ice Pellets", icon: "🌨️" },
+  7101: { text: "Heavy Ice Pellets", icon: "🌨️" },
+  7102: { text: "Light Ice Pellets", icon: "🌨️" },
+  8000: { text: "Thunderstorm", icon: "⚡" },
+};
+
 function Home() {
   const dispatch = useDispatch();
   const socket = useSocket();
@@ -185,7 +215,7 @@ function Home() {
               try {
                 const { latitude, longitude } = position.coords;
                 const response = await fetch(
-                  `https://api.weatherapi.com/v1/current.json?key=${API_KEY}&q=${latitude},${longitude}`
+                  `https://api.tomorrow.io/v4/weather/realtime?location=${latitude},${longitude}&apikey=${API_KEY}`
                 );
                 if (!response.ok) throw new Error("Weather API error");
 
@@ -273,40 +303,43 @@ function Home() {
               <div className="flex items-center justify-center py-10">
                 <img src={logo} alt="Loading..." className="w-24 opacity-80" />
               </div>
-            ) : weatherData ? (
-              <div className="mt-6 flex-1 flex flex-col justify-center">
-                <div className="flex items-center gap-4">
-                  <img
-                    src={weatherData.current.condition.icon}
-                    alt="Weather Icon"
-                    className="w-16 h-16 object-contain"
-                  />
-                  <div>
-                    <h2 className="text-white text-4xl md:text-5xl font-display font-bold tracking-tight">
-                      <TempCounter target={weatherData.current.temp_c} />°C
-                    </h2>
-                    <p className="text-white/80 text-sm font-sans font-medium">
-                      {weatherData.current.condition.text}
-                    </p>
+            ) : weatherData && weatherData.data && weatherData.data.values ? (() => {
+              const values = weatherData.data.values;
+              const codeInfo = weatherCodesMap[values.weatherCode] || { text: "Unknown", icon: "❓" };
+              const locationStr = weatherData.location?.name || "Local Area";
+              return (
+                <div className="mt-6 flex-1 flex flex-col justify-center">
+                  <div className="flex items-center gap-4">
+                    <span className="text-4xl md:text-5xl" role="img" aria-label="weather-icon">
+                      {codeInfo.icon}
+                    </span>
+                    <div>
+                      <h2 className="text-white text-4xl md:text-5xl font-display font-bold tracking-tight">
+                        <TempCounter target={values.temperature} />°C
+                      </h2>
+                      <p className="text-white/80 text-sm font-sans font-medium">
+                        {codeInfo.text}
+                      </p>
+                    </div>
                   </div>
-                </div>
 
-                <div className="mt-6 grid grid-cols-2 gap-4 border-t border-white/10 pt-4 text-left">
-                  <div>
-                    <p className="text-white/40 text-[10px] uppercase font-semibold">Location</p>
-                    <p className="text-white text-sm font-medium truncate">
-                      {weatherData.location.name}, {weatherData.location.region}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-white/40 text-[10px] uppercase font-semibold">Humidity</p>
-                    <p className="text-white text-sm font-medium">
-                      {weatherData.current.humidity}%
-                    </p>
+                  <div className="mt-6 grid grid-cols-2 gap-4 border-t border-white/10 pt-4 text-left">
+                    <div>
+                      <p className="text-white/40 text-[10px] uppercase font-semibold">Location</p>
+                      <p className="text-white text-sm font-medium truncate" title={locationStr}>
+                        {locationStr}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-white/40 text-[10px] uppercase font-semibold">Humidity</p>
+                      <p className="text-white text-sm font-medium">
+                        {values.humidity}%
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ) : (
+              );
+            })() : (
               <p className="text-white/80 py-8 text-sm">Unable to load weather data.</p>
             )}
           </motion.div>

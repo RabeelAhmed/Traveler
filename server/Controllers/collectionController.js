@@ -2,6 +2,7 @@ const Collection = require('../Models/collection');
 const Post = require('../Models/post');
 const { success, error } = require('../Utils/responseWrapper');
 const { mapPostOutput } = require('../Utils/utils');
+const { remember, deleteCache, TTL } = require('../Utils/cache');
 
 // POST /collection
 const createCollection = async (req, res) => {
@@ -20,6 +21,9 @@ const createCollection = async (req, res) => {
       isPublic: isPublic !== undefined ? isPublic : true,
     });
 
+    // ── Cache Invalidation ──────────────────────────────────────────────────
+    await deleteCache(`collections:${curUserId}`);
+
     return res.send(success(201, { collection }));
   } catch (err) {
     console.error('createCollection error:', err);
@@ -33,30 +37,28 @@ const getUserCollections = async (req, res) => {
     const { userId } = req.params;
     const curUserId = req.user.user_Id;
 
-    // Own collections → all; other user → public only
-    const filter =
-      userId === curUserId
-        ? { owner: userId }
-        : { owner: userId, isPublic: true };
+    const cacheKey = `collections:${userId}`;
+    const collections = await remember(cacheKey, TTL.COLLECTIONS, async () => {
+      // Own collections → all; other user → public only
+      const filter =
+        userId === curUserId
+          ? { owner: userId }
+          : { owner: userId, isPublic: true };
 
-    const rawCollections = await Collection.find(filter)
-      .populate({
-        path: 'posts',
-        select: 'media',
-      })
-      .sort({ createdAt: -1 });
+      const rawCollections = await Collection.find(filter)
+        .populate({ path: 'posts', select: 'media' })
+        .sort({ createdAt: -1 });
 
-    // Attach a coverImages array (up to 4 first-media-item URLs)
-    const collections = rawCollections.map((col) => {
-      const colObj = col.toObject();
-      colObj.coverImages = col.posts
-        .slice(0, 4)
-        .map((p) => p?.media?.[0]?.url)
-        .filter(Boolean);
-      // Replace full post objects with just post IDs for the response
-      colObj.postCount = col.posts.length;
-      colObj.posts = col.posts.map((p) => p._id);
-      return colObj;
+      return rawCollections.map((col) => {
+        const colObj = col.toObject();
+        colObj.coverImages = col.posts
+          .slice(0, 4)
+          .map((p) => p?.media?.[0]?.url)
+          .filter(Boolean);
+        colObj.postCount = col.posts.length;
+        colObj.posts = col.posts.map((p) => p._id);
+        return colObj;
+      });
     });
 
     return res.send(success(200, { collections }));
@@ -141,6 +143,9 @@ const updateCollection = async (req, res) => {
 
     await collection.save();
 
+    // ── Cache Invalidation ──────────────────────────────────────────────────
+    await deleteCache(`collections:${curUserId}`);
+
     return res.send(success(200, { collection }));
   } catch (err) {
     console.error('updateCollection error:', err);
@@ -164,6 +169,9 @@ const deleteCollection = async (req, res) => {
     }
 
     await Collection.findByIdAndDelete(id);
+
+    // ── Cache Invalidation ──────────────────────────────────────────────────
+    await deleteCache(`collections:${curUserId}`);
 
     return res.send(success(200, { message: 'Collection deleted successfully' }));
   } catch (err) {
@@ -203,6 +211,9 @@ const togglePostInCollection = async (req, res) => {
     }
 
     await collection.save();
+
+    // ── Cache Invalidation ──────────────────────────────────────────────────
+    await deleteCache(`collections:${curUserId}`);
 
     return res.send(
       success(200, {

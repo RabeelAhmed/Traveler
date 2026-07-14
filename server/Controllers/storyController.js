@@ -9,6 +9,7 @@ const dotenv = require("dotenv");
 const Notification = require("../Models/notification");
 const Story = require("../Models/story");
 const { notify } = require("../socket");
+const { remember, deleteCache, TTL } = require("../Utils/cache");
 dotenv.config();
 
 const addStory = async (req, res) => {
@@ -103,6 +104,9 @@ const addStory = async (req, res) => {
     author.stories.push(newStory._id);
     await author.save();
 
+    // ── Cache Invalidation ──────────────────────────────────────────────────
+    await deleteCache('stories');
+
     // Prepare response
     const mappedStory = mapStoryOutput(newStory, author);
     
@@ -195,12 +199,17 @@ const generateSignature = (req, res) => {
   }
 };
 const getStory = async(req,res) => {
-  const allStory = await story.find().populate('userId', 'profilePicture');
-  const curUserId = req.user?.user_Id;
-  return res.json(success(201,{
-    stories: allStory.map((story) => mapStoryOutput(story, curUserId)),
+  try {
+    const curUserId = req.user?.user_Id;
+    const stories = await remember('stories', TTL.STORIES, async () => {
+      const allStory = await story.find().populate('userId', 'profilePicture');
+      return allStory.map((s) => mapStoryOutput(s, curUserId));
+    });
+    return res.json(success(201, { stories }));
+  } catch (err) {
+    console.error('getStory error:', err);
+    return res.status(500).json(error(500, 'Something went wrong'));
   }
-  ))
 }
 
 const likeAndUnlikeStory = async (req, res) => {
@@ -252,10 +261,13 @@ const likeAndUnlikeStory = async (req, res) => {
       notify(notification);
     }
 
+    // ── Cache Invalidation ──────────────────────────────────────────────────
+    await deleteCache('stories');
+
     return res.status(200).json({
       success: true,
       message: isLiked ? "Story unliked successfully" : "Story liked successfully",
-      story: mapStoryOutput(curStory,curUserId) // Include total likes count
+      story: mapStoryOutput(curStory,curUserId)
     });
 
   } catch (error) {
@@ -263,7 +275,7 @@ const likeAndUnlikeStory = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Something went wrong, please try again later",
-      error: error.message, // Include detailed error message
+      error: error.message,
     });
   }
 };

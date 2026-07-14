@@ -6,6 +6,8 @@ const { mapPostOutput } = require("../Utils/utils");
 const { cloudinary, uploadToCloudinary, validateFile } = require("../Utils/cloudinaryConfig");
 const Notification = require("../Models/notification");
 const { notify, broadcastNewPost } = require("../socket");
+const { remember, deleteCache, deleteByPattern, TTL } = require("../Utils/cache");
+
 const createPost = async (req, res) => {
   try {
     const { title, description, location, rating, tags, media, hashtags } = req.body;
@@ -84,6 +86,14 @@ const createPost = async (req, res) => {
       broadcastNewPost(auther.followers, mappedPost);
     }
 
+    // ── Cache Invalidation ──────────────────────────────────────────────────
+    await Promise.all([
+      deleteCache(`feed:${auther_Id}`),
+      deleteCache(`profile:${auther_Id}`),
+      deleteCache('trending:destinations'),
+      deleteCache('trending:tags'),
+    ]);
+
     const message = "Post has been uploaded";
     return res.send(success(201, { newPost, message, achivement }));
 
@@ -103,7 +113,6 @@ const uploadMediaController = async (req, res) => {
     let videoCount = 0;
     const filesToUpload = [];
 
-    // Validate all files first
     for (const file of req.files) {
       const resourceType = validateFile(file);
       if (resourceType === 'image') {
@@ -121,12 +130,10 @@ const uploadMediaController = async (req, res) => {
       return res.status(400).json(error(400, "Maximum 3 videos allowed."));
     }
 
-    // Check cloudName bypass
     const cloudName = process.env.CLOUDINARY_CLOUD_NAME || process.env.CLOUD_NAME;
     const media = [];
 
     if (cloudName === "dummy" || !cloudName) {
-      // Local dev/bypass mode
       for (const item of filesToUpload) {
         const mimeType = item.file.mimetype || (item.resourceType === 'image' ? 'image/jpeg' : 'video/mp4');
         const base64Data = `data:${mimeType};base64,${item.file.buffer.toString("base64")}`;
@@ -137,8 +144,7 @@ const uploadMediaController = async (req, res) => {
         });
       }
     } else {
-      // Upload to Cloudinary
-      const uploadPromises = filesToUpload.map(item => 
+      const uploadPromises = filesToUpload.map(item =>
         uploadToCloudinary(item.file.buffer, "traveler/posts", item.file.mimetype)
       );
       const results = await Promise.all(uploadPromises);
@@ -161,13 +167,10 @@ const uploadMediaController = async (req, res) => {
 const generateSignature = (req, res) => {
   const timestamp = Math.round(new Date().getTime() / 1000);
 
-  const folder = "Post_Media"; // ✅ Correct format
+  const folder = "Post_Media";
 
   const signature = cloudinary.utils.api_sign_request(
-    {
-      timestamp,
-      folder,
-    },
+    { timestamp, folder },
     process.env.CLOUDINARY_API_SECRET
   );
 
@@ -176,7 +179,7 @@ const generateSignature = (req, res) => {
     timestamp,
     cloudName: process.env.CLOUD_NAME,
     apiKey: process.env.API_KEY,
-    folder, // Include the folder so frontend knows where to upload
+    folder,
   };
 
   return res.send(success(201, { data }));
@@ -187,21 +190,19 @@ const likeAndUnlikePost = async (req, res) => {
   try {
     const { postId } = req.body;
     const curUserId = req.user.user_Id;
-    // Find the post by ID and populate the userId reference
+
     const post = await Post.findById(postId).populate("userId");
     const postOwner = await user.findById(post.userId);
     if (!post) {
       return res.status(404).json(error(404, "Post Not Found"));
     }
 
-    // Check if the user has already liked the post
     const isLiked = post.likes.includes(curUserId);
 
-    // Perform the atomic like/unlike operation
     const updateOperation = isLiked
-      ? { $pull: { likes: curUserId } } // Remove the user ID from likes array
-      : { $addToSet: { likes: curUserId } }; // Add the user ID to likes array
-    // Update the post and return the updated post
+      ? { $pull: { likes: curUserId } }
+      : { $addToSet: { likes: curUserId } };
+
     let achivement;
     if (post.likes.length === 0 && !isLiked) {
       achivement = "explorer";
@@ -216,7 +217,7 @@ const likeAndUnlikePost = async (req, res) => {
 
         await postOwner.save();
         const notification = new Notification({
-          recipient: post.userId._id, // Post owner
+          recipient: post.userId._id,
           sender: post.userId._id,
           type: "Achivement",
           post: postId,
@@ -234,9 +235,9 @@ const likeAndUnlikePost = async (req, res) => {
     }).populate("userId");
     console.log(updatedPost);
     const responsePost = await updatedPost.populate({
-      path: "comments", // Populate comments
+      path: "comments",
       populate: {
-        path: "userId", // Assuming each comment has an 'author' field to populate
+        path: "userId",
         select: "fullname profilePicture",
       },
     });
@@ -245,7 +246,7 @@ const likeAndUnlikePost = async (req, res) => {
     if (!isLiked) {
       if (!(post.userId._id.toString() === curUserId)) {
         const notification = new Notification({
-          recipient: post.userId._id, // Post owner
+          recipient: post.userId._id,
           sender: curUserId,
           type: "like",
           post: postId,
@@ -254,13 +255,20 @@ const likeAndUnlikePost = async (req, res) => {
         notify(notification);
       }
     }
+
+    // ── Cache Invalidation ──────────────────────────────────────────────────
+    await Promise.all([
+      deleteCache(`post:${postId}`),
+      deleteCache(`feed:${curUserId}`),
+    ]);
+
     return res
       .status(200)
       .json(
         success(200, { post: mapPostOutput(responsePost, curUserId), message })
       );
   } catch (err) {
-    console.error("Error in likeAndUnlikePost:", err); // Log the error for debugging purposes
+    console.error("Error in likeAndUnlikePost:", err);
     return res.status(500).json(error(500, "Something went wrong"));
   }
 };
@@ -270,13 +278,11 @@ const addComment = async (req, res) => {
     const { postId, commentText } = req.body;
     const curUserId = req.user.user_Id;
 
-    // Find the post by ID and populate the userId reference
     const post = await Post.findById(postId);
     if (!post) {
       return res.status(404).json(error(404, "Post Not Found"));
     }
     const postOwner = await user.findById(post.userId);
-    // Create a comment object
     const comment = {
       userId: curUserId,
       commentText: commentText,
@@ -296,7 +302,7 @@ const addComment = async (req, res) => {
 
         await postOwner.save();
         const notification = new Notification({
-          recipient: post.userId, // Post owner is just post.userId
+          recipient: post.userId,
           sender: post.userId,
           type: "Achivement",
           post: postId,
@@ -306,19 +312,15 @@ const addComment = async (req, res) => {
       }
     }
 
-    // Push the comment object into the comments array
     post.comments.push(comment);
-
-    // Save the updated post
     await post.save();
+
     let responsePost = await Post.findById(postId)
+      .populate({ path: "userId" })
       .populate({
-        path: "userId", // Populate user data
-      })
-      .populate({
-        path: "comments", // Populate comments
+        path: "comments",
         populate: {
-          path: "userId", // Assuming each comment has an 'author' field to populate
+          path: "userId",
           select: "fullname profilePicture",
         },
       });
@@ -328,7 +330,7 @@ const addComment = async (req, res) => {
 
     if (post.userId.toString() !== curUserId) {
       const notification = new Notification({
-        recipient: post.userId, // Post owner
+        recipient: post.userId,
         sender: curUserId,
         type: "comment",
         post: postId,
@@ -338,10 +340,13 @@ const addComment = async (req, res) => {
       console.log("Entring Notify");
       notify(notification);
     }
-    // Return the response with the mapped output of the updated post
+
+    // ── Cache Invalidation ──────────────────────────────────────────────────
+    await deleteCache(`post:${postId}`);
+
     return res.status(200).json(success(200, { responsePost }));
   } catch (err) {
-    console.error("Error in addComment:", err); // Log the error for debugging purposes
+    console.error("Error in addComment:", err);
     return res.send(error(500, "Something went wrong"));
   }
 };
@@ -351,26 +356,23 @@ const deleteComment = async (req, res) => {
     const { postId, commentId } = req.body;
     const curUserId = req.user.user_Id;
 
-    // Find the post by ID and populate comments with userId reference
     const post = await Post.findById(postId).populate("comments.userId");
     if (!post) {
       return res.status(404).json(error(404, "Post Not Found"));
     }
 
-    // Find the comment by ID
     const comment = post.comments.id(commentId);
     if (!comment) {
       return res.status(404).json(error(404, "Comment Not Found"));
     }
 
-    // Check if the comment belongs to the current user
     if (comment.userId._id.toString() === curUserId) {
-      // Remove the comment from the comments array
       post.comments.pull(commentId);
-      // Save the updated post
       await post.save();
 
-      // Return the response with the mapped output of the updated post
+      // ── Cache Invalidation ──────────────────────────────────────────────
+      await deleteCache(`post:${postId}`);
+
       return res
         .status(200)
         .json(success(200, { post: mapPostOutput(post, curUserId) }));
@@ -402,8 +404,17 @@ const deletePost = async (req, res) => {
       await curUser.save();
     }
 
-    // Remove the post itself
     await Post.findByIdAndDelete(postId);
+
+    // ── Cache Invalidation ──────────────────────────────────────────────────
+    await Promise.all([
+      deleteCache(`post:${postId}`),
+      deleteCache(`feed:${curUserId}`),
+      deleteCache(`profile:${curUserId}`),
+      deleteCache('trending:destinations'),
+      deleteCache('trending:tags'),
+    ]);
+
     return res
       .status(200)
       .json(success(200, { post: mapPostOutput(post, curUserId) }));
@@ -411,6 +422,7 @@ const deletePost = async (req, res) => {
     return res.send(error(500, "Something went wrong"));
   }
 };
+
 const getPost = async (req, res) => {
   try {
     const { _id } = req.params;
@@ -419,21 +431,23 @@ const getPost = async (req, res) => {
       return res.status(400).send(error("Invalid post ID"));
     }
 
-    const post = await Post.findById(_id)
-      .populate("userId")
-      .populate("comments.userId");
+    const curUserId = req.user?.user_Id || null;
+    const cacheKey = `post:${_id}`;
 
-    if (!post) {
+    const postData = await remember(cacheKey, TTL.POST, async () => {
+      const post = await Post.findById(_id)
+        .populate("userId")
+        .populate("comments.userId");
+
+      if (!post) return null;
+      return mapPostOutput(post, curUserId);
+    });
+
+    if (!postData) {
       return res.status(404).send(error("Post Not Found"));
     }
 
-    const curUserId = req.user?.user_Id || null;
-
-    return res.status(200).send(
-      success(200, {
-        post: mapPostOutput(post, curUserId),
-      })
-    );
+    return res.status(200).send(success(200, { post: postData }));
   } catch (err) {
     console.error(err);
     return res.status(500).send(error("Something went wrong"));
@@ -457,47 +471,41 @@ const searchAll = async (req, res) => {
       query = query.slice(1);
     }
 
-    // 1. 🔎 Search Users
-    const users = await user
-      .find({
+    const cacheKey = `search:${query.toLowerCase()}`;
+
+    const results = await remember(cacheKey, TTL.SEARCH, async () => {
+      const users = await user
+        .find({
+          $or: [
+            { fullname: { $regex: query, $options: "i" } },
+            { username: { $regex: query, $options: "i" } },
+            { bio: { $regex: query, $options: "i" } },
+          ],
+        })
+        .select("username fullname profilePicture bio");
+
+      const postFilter = {
         $or: [
-          { fullname: { $regex: query, $options: "i" } },
-          { username: { $regex: query, $options: "i" } },
-          { bio: { $regex: query, $options: "i" } },
+          { title: { $regex: query, $options: "i" } },
+          { description: { $regex: query, $options: "i" } },
+          { location: { $regex: query, $options: "i" } },
+          { hashtags: { $regex: query, $options: "i" } },
         ],
-      })
-      .select("username fullname profilePicture bio");
+      };
 
-    // 2. 🔎 Search Posts
-    const postFilter = {
-      $or: [
-        { title: { $regex: query, $options: "i" } },
-        { description: { $regex: query, $options: "i" } },
-        { location: { $regex: query, $options: "i" } },
-        { hashtags: { $regex: query, $options: "i" } }, // matches stored hashtags without #
-      ],
-    };
+      const posts = await Post.find(postFilter)
+        .populate("userId", "fullname username profilePicture")
+        .populate("journeyId")
+        .populate({
+          path: "comments",
+          populate: { path: "userId", select: "fullname profilePicture" },
+        });
 
-    const posts = await Post.find(postFilter)
-      .populate("userId", "fullname username profilePicture")
-      .populate("journeyId")
-      .populate({
-        path: "comments",
-        populate: {
-          path: "userId",
-          select: "fullname profilePicture",
-        },
-      });
+      const formattedPosts = posts.map((post) => mapPostOutput(post, curUserId));
+      return { users, posts: formattedPosts };
+    });
 
-    // 3. 🧹 Format posts
-    const formattedPosts = posts.map((post) => mapPostOutput(post, curUserId));
-
-    return res.status(200).json(
-      success(200, {
-        users,
-        posts: formattedPosts,
-      })
-    );
+    return res.status(200).json(success(200, results));
   } catch (err) {
     console.error("Search error:", err);
     return res.status(500).json(error(500, "Internal Server Error"));
@@ -505,30 +513,32 @@ const searchAll = async (req, res) => {
 };
 
 
-
 const getTrendingDestinations = async (req, res) => {
   try {
-    const destinations = await Post.aggregate([
-      {
-        $group: {
-          _id: '$location',
-          postCount: { $sum: 1 },
-          avgRating: { $avg: '$rating' },
-          thumbnail: { $first: { $arrayElemAt: ['$media', 0] } },
+    const destinations = await remember('trending:destinations', TTL.TRENDING, async () => {
+      return await Post.aggregate([
+        {
+          $group: {
+            _id: '$location',
+            postCount: { $sum: 1 },
+            avgRating: { $avg: '$rating' },
+            thumbnail: { $first: { $arrayElemAt: ['$media', 0] } },
+          },
         },
-      },
-      { $sort: { postCount: -1 } },
-      { $limit: 20 },
-      {
-        $project: {
-          location: '$_id',
-          postCount: 1,
-          avgRating: 1,
-          thumbnail: 1,
-          _id: 0,
+        { $sort: { postCount: -1 } },
+        { $limit: 20 },
+        {
+          $project: {
+            location: '$_id',
+            postCount: 1,
+            avgRating: 1,
+            thumbnail: 1,
+            _id: 0,
+          },
         },
-      },
-    ]);
+      ]);
+    });
+
     return res.status(200).send(success(200, { destinations }));
   } catch (err) {
     console.error('getTrendingDestinations error:', err);
@@ -538,14 +548,17 @@ const getTrendingDestinations = async (req, res) => {
 
 const getTrendingTags = async (req, res) => {
   try {
-    const tags = await Post.aggregate([
-      { $unwind: '$hashtags' },
-      { $match: { hashtags: { $ne: '', $exists: true } } },
-      { $group: { _id: '$hashtags', count: { $sum: 1 } } },
-      { $sort: { count: -1 } },
-      { $limit: 15 },
-      { $project: { tag: '$_id', count: 1, _id: 0 } },
-    ]);
+    const tags = await remember('trending:tags', TTL.TRENDING, async () => {
+      return await Post.aggregate([
+        { $unwind: '$hashtags' },
+        { $match: { hashtags: { $ne: '', $exists: true } } },
+        { $group: { _id: '$hashtags', count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+        { $limit: 15 },
+        { $project: { tag: '$_id', count: 1, _id: 0 } },
+      ]);
+    });
+
     return res.send(success(200, { tags }));
   } catch (err) {
     console.error('getTrendingTags error:', err);
@@ -566,4 +579,3 @@ module.exports = {
   getTrendingDestinations,
   getTrendingTags,
 };
-

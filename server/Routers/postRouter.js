@@ -3,8 +3,9 @@ const {createPost,likeAndUnlikePost,addComment,deleteComment,deletePost,getPost,
 const {verifyAuthToken} = require('../Middleware/jwtAuthMiddleware')
 const { upload, multipleUpload } = require('../Middleware/uploads');
 const {optionalAuthToken} = require('../Middleware/jwtAuthMiddleware')
+const { createPostLimiter } = require('../Middleware/rateLimiter');
 
-router.post('/createpost',verifyAuthToken,multipleUpload,createPost);
+router.post('/createpost',verifyAuthToken, createPostLimiter, multipleUpload,createPost);
 router.post('/upload-media',verifyAuthToken,upload.array('files', 8),uploadMediaController);
 router.get('/signature',verifyAuthToken,generateSignature);
 router.post('/likepost',verifyAuthToken,likeAndUnlikePost);

@@ -43,6 +43,8 @@ const cors       = require('cors');
 // Initialise DB + cron jobs on first require
 require('./db');
 require('./Utils/cronJobs');
+// Initialise Redis client (logs ✓ Redis (Upstash) Configured or a fallback warning)
+require('./Utils/redis');
 
 const app = express();
 
