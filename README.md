@@ -68,6 +68,9 @@ Most social platforms treat travel as a secondary activity. Traveler was built f
 | 🔖 **Bookmarks** | Save travel posts, organize them into collections, and manage them under the Saved profile tab |
 | 🤝 **Collab Journeys** | Invite friends to collaborate on active journeys with creator-attributed nodes |
 | 📍 **Live Travel** | Ephemeral, in-memory Socket.io geolocation tracking with pulsing map overlays |
+| ⚡ **Redis Caching** | High-performance Cache-Aside pattern via Upstash Redis to cache feeds, stories, profiles, collections, and search queries |
+| 🛡️ **Rate Limiting** | Redis-backed rate limiting to protect authentication, password reset, and post creation endpoints |
+
 
 ---
 
@@ -92,6 +95,7 @@ Most social platforms treat travel as a secondary activity. Traveler was built f
 |-----------|---------|
 | Node.js + Express | REST API server |
 | MongoDB + Mongoose | Document database |
+| @upstash/redis | Serverless HTTP Redis client for caching & rate limiting |
 | Socket.io | Real-time bidirectional communication |
 | JSON Web Token (JWT) | Stateless authentication |
 | bcrypt | Password hashing |
@@ -136,6 +140,8 @@ Most social platforms treat travel as a secondary activity. Traveler was built f
 │  /review         │
 │  socket.io       │
 └────────┬─────────┘
+         │
+         ├───[ Cache-Aside / Rate Limits ]───► [ Upstash Redis ]
          │
 ┌────────▼─────────┐
 │    MongoDB       │
@@ -363,6 +369,9 @@ cp agent/.env.example agent/.env
 | `CLOUDINARY_API_KEY` | Cloudinary API key |
 | `CLOUDINARY_API_SECRET` | Cloudinary API secret |
 | `RESEND_API_KEY` | Resend API key for transactional emails |
+| `KV_REST_API_URL` | Upstash Redis REST URL (or `UPSTASH_REDIS_REST_URL`) |
+| `KV_REST_API_TOKEN` | Upstash Redis REST Token (or `UPSTASH_REDIS_REST_TOKEN`) |
+| `KV_REST_API_READ_ONLY_TOKEN` | (Optional) Upstash Read-only Token |
 
 ### `client/.env`
 
