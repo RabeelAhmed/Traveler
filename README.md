@@ -37,6 +37,20 @@
 
 ---
 
+## 🌍 Live Deployments
+
+Traveler is fully deployed and accessible online.
+
+| Service | Platform | URL |
+|---------|----------|-----|
+| **Frontend** | Netlify | [https://traveler-social.netlify.app](https://traveler-social.netlify.app) |
+| **Backend API** | Vercel | [https://traveler-backend-six.vercel.app](https://traveler-backend-six.vercel.app) |
+| **AI Agent** | Vercel | [https://traveler-fawn.vercel.app](https://traveler-fawn.vercel.app) |
+
+> **Note on WebSockets:** The backend is deployed on Vercel Serverless Functions, which do not support persistent Socket.IO connections. Real-time features gracefully degrade to REST fallbacks where applicable, and users are notified via a custom modal. See [Graceful Degradation](#-serverless--graceful-degradation) for details.
+
+---
+
 ## 💡 Why Traveler?
 
 Most social platforms treat travel as a secondary activity. Traveler was built from the ground up with the traveller's workflow in mind:
@@ -70,7 +84,18 @@ Most social platforms treat travel as a secondary activity. Traveler was built f
 | 📍 **Live Travel** | Ephemeral, in-memory Socket.io geolocation tracking with pulsing map overlays |
 | ⚡ **Redis Caching** | High-performance Cache-Aside pattern via Upstash Redis to cache feeds, stories, profiles, collections, and search queries |
 | 🛡️ **Rate Limiting** | Redis-backed rate limiting to protect authentication, password reset, and post creation endpoints |
+| 📉 **Graceful Degradation** | Socket.IO features gracefully degrade to REST fallbacks on Vercel serverless deployments using the `VITE_SOCKET_IO_ENABLED` feature flag |
 
+---
+
+## ⚡ Serverless & Graceful Degradation
+
+Traveler is designed to run locally with full Socket.IO capabilities, but deployed gracefully to serverless environments:
+
+1. **Vercel Serverless:** Vercel functions are stateless and ephemeral, meaning persistent WebSocket connections are impossible.
+2. **Feature Flag:** The client uses `VITE_SOCKET_IO_ENABLED=false` to detect serverless deployments.
+3. **UX Handling:** Instead of silently failing or throwing connection errors, the frontend hooks intercept real-time actions (like "Go Live") and display a professional glassmorphism modal explaining that real-time features are temporarily unavailable on the current hosting.
+4. **Migration Ready:** Re-enabling WebSockets when migrating to a long-running server (like Render or Railway) requires zero code changes — simply set the feature flag to `true`.
 
 ---
 
@@ -118,43 +143,31 @@ Most social platforms treat travel as a secondary activity. Traveler was built f
 
 ## 🏗 Architecture Overview
 
-```
+```text
 ┌──────────────────────────────────────────────────────────┐
-│                      CLIENT (React)                       │
-│   Redux Store ─► Pages ─► Components ─► Axios / Socket  │
+│  CLIENT (React + Vite)  — Hosted on Netlify               │
+│  https://traveler-social.netlify.app                     │
 └───────────────────────┬──────────────────────────────────┘
-                        │ HTTP + WebSocket
+                        │ HTTPS (Axios)
          ┌──────────────┴──────────────┐
          │                             │
 ┌────────▼─────────┐        ┌──────────▼──────────┐
 │  Express Server  │        │   AI Agent (Node)   │
-│  :5000           │        │   :5001             │
+│  (Vercel api/)   │        │   (Vercel root)     │
 │ ───────────────  │        │ ─────────────────── │
-│  /auth           │        │  GET /recommend     │
-│  /post           │        │  GET /recommend/geo │
-│  /story          │        │                     │
-│  /user           │        │  CSV: 69 Pakistan   │
-│  /journey        │        │  tourist sites      │
-│  /collection     │        └─────────────────────┘
-│  /message        │
-│  /review         │
-│  socket.io       │
+│  /auth, /post    │        │  GET /recommend     │
+│  /user, /journey │        │  GET /recommend/geo │
+│  /collection     │        │                     │
+│                  │        │  CSV: 69 Pakistan   │
+│  Socket.io ❌    │        │  tourist sites      │
+│  (Disabled prod) │        └─────────────────────┘
 └────────┬─────────┘
          │
          ├───[ Cache-Aside / Rate Limits ]───► [ Upstash Redis ]
          │
 ┌────────▼─────────┐
 │    MongoDB       │
-│ ───────────────  │
-│  users           │
-│  posts           │
-│  stories         │
-│  journeys        │
-│  notifications   │
-│  collections     │
-│  conversations   │
-│  messages        │
-│  reviews         │
+│  (Atlas Cluster) │
 └────────┬─────────┘
          │
 ┌────────▼─────────┐
