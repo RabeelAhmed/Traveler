@@ -7,6 +7,7 @@ import { formatDistanceToNow, isToday, isYesterday, format } from "date-fns";
 
 import { getConversations, getMessages, sendMessage, setActiveConversation, markConversationRead } from "../Toolkit/slices/messageSlice";
 import { useSocket } from "../context/SocketContext";
+import { useSocketAvailability } from "../hooks/useSocketAvailability";
 import { axiosClient } from "../utils/axiosClient";
 import ProfileImage from "../Components/ProfileImage";
 import Header from "../Components/Header";
@@ -17,6 +18,11 @@ const Messages = () => {
   const dispatch = useDispatch();
   const socket = useSocket();
   
+  // Socket.IO availability — used to inform users that real-time features are disabled.
+  // When socket is null (disabled), typing events and real-time message delivery won't work,
+  // but sending/receiving messages via REST API still works normally.
+  const { isEnabled: socketEnabled, showUnavailableModal } = useSocketAvailability();
+
   const myProfile = useSelector((state) => state.appConfig.myProfile);
   const curUserId = myProfile?._id;
   
@@ -70,6 +76,18 @@ const Messages = () => {
   useEffect(() => {
     dispatch(getConversations());
   }, [dispatch]);
+
+  // ── Socket.IO Unavailability Notice ──────────────────────────────────────────────
+  // When socket is disabled, show the modal once on page entry so users know
+  // that real-time features (typing indicators, instant message delivery)
+  // are not available. REST-based send/receive still works normally.
+  // TO REMOVE: delete this block when VITE_SOCKET_IO_ENABLED is set to true.
+  useEffect(() => {
+    if (!socketEnabled) {
+      showUnavailableModal();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Load messages automatically when activeConversation changes
   useEffect(() => {

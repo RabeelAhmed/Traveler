@@ -41,6 +41,7 @@ import { prependPost } from './Toolkit/slices/feedSlice';
 import { refreshTags } from './Toolkit/slices/trendingTagsSlice';
 import { useSocket } from "./context/SocketContext";
 import { receiveMessage, markConversationRead } from "./Toolkit/slices/messageSlice";
+import SocketUnavailableModal from "./Components/SocketUnavailableModal";
 
 const REACT_APP_SERVER_BASE_URL = import.meta.env.VITE_SERVER_BASE_URL;
 function App() {
@@ -170,6 +171,8 @@ function App() {
 
   return (
     <>
+      {/* Socket.IO unavailability modal — renders globally, triggered by useSocketAvailability hook */}
+      <SocketUnavailableModal />
       <Navbar />
       <AnimatePresence mode="wait">
         <Routes location={location} key={location.pathname}>

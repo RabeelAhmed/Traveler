@@ -15,6 +15,7 @@ import { setIsLive } from "../Toolkit/slices/liveSlice";
 import toast from "react-hot-toast";
 import Loader from "../Components/Loader";
 import logo from "../assets/Images/traveler_logo_animated.gif";
+import { useSocketAvailability } from "../hooks/useSocketAvailability";
 import {
   staggerContainer,
   fadeUp,
@@ -95,6 +96,9 @@ function Home() {
     new Date().toLocaleTimeString()
   );
 
+  // Socket.IO availability — used to intercept Go Live when socket is disabled
+  const { isEnabled: socketEnabled, showUnavailableModal } = useSocketAvailability();
+
   const watchIdRef = useRef(null);
   const isLiveRef = useRef(isLive);
 
@@ -111,6 +115,15 @@ function Home() {
   }, []);
 
   const handleLiveToggle = () => {
+    // ── Feature Flag Guard ────────────────────────────────────────────────────
+    // Socket.IO is disabled on Vercel serverless. Show the unavailability modal
+    // instead of attempting a socket emission that would silently fail.
+    // TO REMOVE: delete this block when VITE_SOCKET_IO_ENABLED is set to true.
+    if (!socketEnabled) {
+      showUnavailableModal();
+      return;
+    }
+
     if (!isLive) {
       if (!navigator.geolocation) {
         toast.error("Geolocation is not supported by your browser");
@@ -461,37 +474,55 @@ function Home() {
           </Link>
 
           {/* Bento Item 6: Go Live Toggle (1 Column) */}
-          <div className="block sm:col-span-1 lg:col-span-1">
+          <div className="block sm:col-span-1 lg:col-span-1" title={!socketEnabled ? "Real-time features temporarily unavailable" : ""}>
             <motion.div
               variants={fadeUp}
               whileHover={{ y: -4 }}
               onClick={handleLiveToggle}
               className={`backdrop-blur-md border rounded-3xl p-6 shadow-lg h-full flex flex-col items-center justify-center cursor-pointer transition-all duration-300 text-center select-none relative overflow-hidden group ${
-                isLive
+                !socketEnabled
+                  ? "bg-black/20 border-white/5 opacity-60"
+                  : isLive
                   ? "bg-sunset-500/25 border-sunset-400/50 shadow-[0_8px_30px_rgba(241,102,58,0.25)]"
                   : "bg-black/30 border-white/10 hover:border-white/20 hover:bg-black/40"
               }`}
             >
               {/* Pulsing glow ring in live mode */}
-              {isLive && (
+              {isLive && socketEnabled && (
                 <div className="absolute inset-0 rounded-3xl border-2 border-sunset-500 animate-pulse pointer-events-none" />
+              )}
+
+              {/* "Unavailable" badge when socket is disabled */}
+              {!socketEnabled && (
+                <div
+                  className="absolute top-3 right-3 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
+                  style={{ background: "rgba(70,134,180,0.2)", color: "#6aa1c8", border: "1px solid rgba(70,134,180,0.3)" }}
+                >
+                  Unavailable
+                </div>
               )}
               
               <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-4 transition-all duration-300 ${
-                isLive
+                !socketEnabled
+                  ? "bg-white/5 text-white/30"
+                  : isLive
                   ? "bg-sunset-500 text-white shadow-[0_0_15px_rgba(241,102,58,0.5)]"
                   : "bg-sunset-500/20 text-sunset-400"
               }`}>
-                <HiLocationMarker className={`text-2xl ${isLive ? "animate-bounce" : ""}`} />
+                <HiLocationMarker className={`text-2xl ${isLive && socketEnabled ? "animate-bounce" : ""}`} />
               </div>
 
               <h3 className="font-display font-semibold text-lg text-white flex items-center gap-1.5 justify-center">
-                {isLive && <span className="w-2.5 h-2.5 rounded-full bg-sunset-500 animate-ping inline-block" />}
-                {isLive ? "● Live" : "Go Live"}
+                {isLive && socketEnabled && <span className="w-2.5 h-2.5 rounded-full bg-sunset-500 animate-ping inline-block" />}
+                {isLive && socketEnabled ? "● Live" : "Go Live"}
               </h3>
               
-              <p className="font-sans text-xs text-sand-300 mt-1 max-w-[150px]">
-                {isLive ? "Sharing your live travel location." : "Broadcast your travel live to followers."}
+              <p className={`font-sans text-xs mt-1 max-w-[150px] ${!socketEnabled ? "text-white/35" : "text-sand-300"}`}>
+                {!socketEnabled
+                  ? "Temporarily unavailable."
+                  : isLive
+                  ? "Sharing your live travel location."
+                  : "Broadcast your travel live to followers."}
               </p>
             </motion.div>
           </div>
