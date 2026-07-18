@@ -9,15 +9,17 @@ import { BrowserRouter } from "react-router-dom";
 import store from './Toolkit/store.js';
 import { Toaster } from "react-hot-toast";
 import { SocketProvider } from "./context/SocketContext";
+import { HelmetProvider } from "react-helmet-async";
 
 createRoot(document.getElementById('root')).render(
-  
   <BrowserRouter>
-  <Provider store={store} >
-  <Toaster position="top-center" reverseOrder={false} />
-    <SocketProvider>
-      <App />
-    </SocketProvider>
-    </Provider>
+    <HelmetProvider>
+      <Provider store={store} >
+        <Toaster position="top-center" reverseOrder={false} />
+        <SocketProvider>
+          <App />
+        </SocketProvider>
+      </Provider>
+    </HelmetProvider>
   </BrowserRouter>
 );

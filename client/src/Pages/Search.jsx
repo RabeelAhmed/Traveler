@@ -8,6 +8,7 @@ import ProfileCard from "../Components/ProfileCard";
 import PostCardSkeleton from "../Components/PostCardSkeleton";
 import Header from "../Components/Header";
 import PageTransition from "../Components/PageTransition";
+import SEO from "../Components/SEO";
 import { springPress, fadeUp, staggerContainer } from "../utils/motion";
 
 const Search = () => {
@@ -100,6 +101,7 @@ const Search = () => {
 
   return (
     <PageTransition>
+      <SEO title="Search | Traveler" noindex={true} path="/search" />
       <div className="bg-sand-50 min-h-screen pb-24 pt-20">
         
         {/* Editorial Header */}

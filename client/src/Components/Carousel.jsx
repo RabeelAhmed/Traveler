@@ -32,7 +32,7 @@ const slideVariants = {
   }),
 };
 
-const Carousel = ({ data }) => {
+const Carousel = ({ data, altPrefix }) => {
   const slides = data || [];
   const [[page, direction], setPage] = useState([0, 0]);
 
@@ -54,7 +54,7 @@ const Carousel = ({ data }) => {
           <motion.img
             key={page}
             src={slides[currentIndex]?.url}
-            alt={`Slide ${currentIndex + 1}`}
+            alt={`${altPrefix || "Slide"} — Image ${currentIndex + 1}`}
             custom={direction}
             variants={slideVariants}
             initial="enter"

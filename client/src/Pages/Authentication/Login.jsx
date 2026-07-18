@@ -11,6 +11,7 @@ import { useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { HiMail, HiLockClosed } from "react-icons/hi";
 import PageTransition from "../../Components/PageTransition";
+import SEO from "../../Components/SEO";
 import { fadeUp, scaleIn, springPress } from "../../utils/motion";
 
 function Login() {
@@ -91,6 +92,7 @@ function Login() {
 
   return (
     <PageTransition>
+      <SEO title="Login | Traveler" noindex={true} path="/login" />
       <div className="min-h-screen bg-sand-50 grid grid-cols-1 md:grid-cols-7 relative overflow-hidden">
         {/* Left Section - Illustration Panel */}
         <motion.div

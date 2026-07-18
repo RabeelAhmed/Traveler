@@ -7,6 +7,7 @@ import { HiOutlinePhotograph } from "react-icons/hi";
 import ReactStars from "react-rating-stars-component";
 import PageTransition from "../Components/PageTransition";
 import PostCardSkeleton from "../Components/PostCardSkeleton";
+import SEO from "../Components/SEO";
 import { staggerContainer, fadeUp } from "../utils/motion";
 import { getTrendingDestinations } from "../Toolkit/slices/trendingSlice";
 
@@ -167,6 +168,11 @@ const TrendingDestinations = () => {
 
   return (
     <PageTransition>
+      <SEO
+        title="Trending Travel Destinations in Pakistan | Traveler"
+        description="Explore the most popular and trending travel destinations in Pakistan right now. Plan your next adventure using traveler reviews, location geotags, and media uploads."
+        path="/trending"
+      />
       <div className="bg-sand-50 min-h-screen pb-24">
 
         {/* ── Premium Hero Header ── */}

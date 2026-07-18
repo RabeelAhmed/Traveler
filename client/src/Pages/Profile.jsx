@@ -22,6 +22,7 @@ import Loader from "../Components/Loader";
 import Header from "../Components/Header";
 import PageTransition from "../Components/PageTransition";
 import VisitedMap from "../Components/VisitedMap";
+import SEO from "../Components/SEO";
 import { FiFolder } from "react-icons/fi";
 import { springPress, scaleIn, fadeUp, staggerContainer } from "../utils/motion";
 
@@ -160,8 +161,31 @@ const Profile = () => {
     return <Loader />;
   }
 
+  const jsonLdSchema = {
+    "@context": "https://schema.org",
+    "@type": "ProfilePage",
+    "mainEntity": {
+      "@type": "Person",
+      "name": profile?.fullname,
+      "alternateName": profile?.username,
+      "description": profile?.bio || `Check out ${profile?.fullname}'s travel logs and journeys on Traveler.`,
+      "image": profile?.profilePicture?.url
+    }
+  };
+
   return (
     <PageTransition>
+      <SEO
+        title={`${profile?.fullname} (@${profile?.username}) | Traveler Profile`}
+        description={profile?.bio ? `${profile.bio.substring(0, 150)}` : `Check out ${profile?.fullname}'s travel journals, shared stories, achievements, and mapped journeys on Traveler.`}
+        path={`/profile/${id}`}
+        image={profile?.profilePicture?.url}
+        type="profile"
+      >
+        <script type="application/ld+json">
+          {JSON.stringify(jsonLdSchema)}
+        </script>
+      </SEO>
       <div className="bg-sand-50 min-h-screen pb-24 pt-20">
         
         {/* Cover Gradient Banner */}

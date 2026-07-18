@@ -36,6 +36,7 @@ const CollectionCard = ({ collection }) => {
                   src={imgUrl}
                   alt={`Cover ${index}`}
                   style={{ zIndex: index + 1 }}
+                  loading="lazy"
                   className={`absolute w-[80%] h-[90%] object-cover rounded-2xl border-2 border-white shadow-[0_8px_30px_rgba(20,41,57,0.06)] transition-transform duration-500 group-hover:scale-[1.03] ${rotateClass}`}
                 />
               );

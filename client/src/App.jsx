@@ -1,39 +1,17 @@
 import "./App.css";
 import React, { useState, useEffect } from "react"; // Use 'React' (capitalized) in imports
 import { useDispatch, useSelector } from "react-redux";
-import Login from "./Pages/Authentication/Login";
-import ResetPassword from "./Pages/Authentication/ResetPassword";
-import Signup from "./Pages/Authentication/Signup"; // Ensure this is correct
-import Home from "./Pages/Home";
-import Landing from "./Pages/Landing";
 import { Routes, Route, useLocation } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
-import { PageNotFound } from "./Pages/PageNotFound";
-import Navbar from "./Components/Navbar";
-import Story from "./Pages/Story";
-import UnderConstruction from "./Pages/UnderConstruction";
-import Forum from "./Pages/Forum";
-import Post from "./Pages/Post";
-import Profile from "./Pages/Profile";
 import { getMyInfo } from "./Toolkit/slices/appConfigSlice";
 import OnlyIfUserNotLoggedIn from "./Components/OnlyIfUserNotLoggedIn";
 import RequireUser from "./Components/RequireUser";
-import CreatePost from "./Pages/CreatePost";
-import ProfileUpdate from "./Pages/ProfileUpdate";
 import FeedLoad from "./Components/FeedLoad";
-import UploadStory from "./Components/UploadStory";
-import Notifications from "./Components/Notification";
 import { io } from "socket.io-client";
 import toast from "react-hot-toast";
 import { axiosClient } from "./utils/axiosClient";
-import TravelAdvisor from "./Pages/TravelAdvisor";
-import Search from "./Pages/Search";
 import Loader from "./Components/Loader";
-import JourneyTreeView from "./Pages/JourneyTreeView";
-import TrendingDestinations from "./Pages/TrendingDestinations";
-import CollectionView from "./Pages/CollectionView";
-import Messages from "./Pages/Messages";
-import DestinationReviews from "./Pages/DestinationReviews";
+import Navbar from "./Components/Navbar";
 
 import { KEY_ACCESS_TOKEN, getItem } from './utils/LocalStorageManager'
 import { setLoggedIn} from './Toolkit/slices/appConfigSlice';
@@ -42,6 +20,30 @@ import { refreshTags } from './Toolkit/slices/trendingTagsSlice';
 import { useSocket } from "./context/SocketContext";
 import { receiveMessage, markConversationRead } from "./Toolkit/slices/messageSlice";
 import SocketUnavailableModal from "./Components/SocketUnavailableModal";
+
+// Lazy-loaded components for code-splitting
+const Login = React.lazy(() => import("./Pages/Authentication/Login"));
+const ResetPassword = React.lazy(() => import("./Pages/Authentication/ResetPassword"));
+const Signup = React.lazy(() => import("./Pages/Authentication/Signup"));
+const Home = React.lazy(() => import("./Pages/Home"));
+const Landing = React.lazy(() => import("./Pages/Landing"));
+const Story = React.lazy(() => import("./Pages/Story"));
+const UnderConstruction = React.lazy(() => import("./Pages/UnderConstruction"));
+const Forum = React.lazy(() => import("./Pages/Forum"));
+const Post = React.lazy(() => import("./Pages/Post"));
+const Profile = React.lazy(() => import("./Pages/Profile"));
+const CreatePost = React.lazy(() => import("./Pages/CreatePost"));
+const ProfileUpdate = React.lazy(() => import("./Pages/ProfileUpdate"));
+const UploadStory = React.lazy(() => import("./Components/UploadStory"));
+const Notifications = React.lazy(() => import("./Components/Notification"));
+const TravelAdvisor = React.lazy(() => import("./Pages/TravelAdvisor"));
+const Search = React.lazy(() => import("./Pages/Search"));
+const JourneyTreeView = React.lazy(() => import("./Pages/JourneyTreeView"));
+const TrendingDestinations = React.lazy(() => import("./Pages/TrendingDestinations"));
+const CollectionView = React.lazy(() => import("./Pages/CollectionView"));
+const Messages = React.lazy(() => import("./Pages/Messages"));
+const DestinationReviews = React.lazy(() => import("./Pages/DestinationReviews"));
+const PageNotFound = React.lazy(() => import("./Pages/PageNotFound").then(module => ({ default: module.PageNotFound })));
 
 const REACT_APP_SERVER_BASE_URL = import.meta.env.VITE_SERVER_BASE_URL;
 function App() {
@@ -175,7 +177,8 @@ function App() {
       <SocketUnavailableModal />
       <Navbar />
       <AnimatePresence mode="wait">
-        <Routes location={location} key={location.pathname}>
+        <React.Suspense fallback={<Loader />}>
+          <Routes location={location} key={location.pathname}>
           <Route path="/underconstruction" element={<UnderConstruction />} />
           <Route path="/*" element={<PageNotFound />} />
           <Route path="/post/:id" element={<Post />} />
@@ -213,6 +216,7 @@ function App() {
             />
           </Route>
         </Routes>
+        </React.Suspense>
       </AnimatePresence>
     </>
   );

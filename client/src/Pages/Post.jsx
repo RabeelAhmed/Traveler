@@ -11,6 +11,7 @@ import AddComment from "../Components/AddComment";
 import { PageNotFound } from "./PageNotFound";
 import Loader from "../Components/Loader";
 import PageTransition from "../Components/PageTransition";
+import SEO from "../Components/SEO";
 import { fadeUp, staggerContainer } from "../utils/motion";
 import ReviewCard from "../Components/ReviewCard";
 import { getReviewsForLocation } from "../Toolkit/slices/reviewSlice";
@@ -83,8 +84,32 @@ const Post = () => {
     navigate("/login", { state: { from: location }, replace: true });
   };
 
+  const jsonLdSchema = {
+    "@context": "https://schema.org",
+    "@type": "SocialMediaPosting",
+    "headline": post?.title,
+    "image": post?.media?.map((m) => m.url) || [],
+    "datePublished": post?.postingDate,
+    "description": post?.description?.substring(0, 150),
+    "author": {
+      "@type": "Person",
+      "name": post?.owner?.name || "Traveler User"
+    }
+  };
+
   return (
     <PageTransition>
+      <SEO
+        title={`${post?.title} | Traveler`}
+        description={post?.description ? post.description.substring(0, 150) : "View this travel story shared on Traveler."}
+        path={`/post/${id}`}
+        image={post?.media?.[0]?.url}
+        type="article"
+      >
+        <script type="application/ld+json">
+          {JSON.stringify(jsonLdSchema)}
+        </script>
+      </SEO>
       <div className="bg-sand-50 min-h-screen pb-24 pt-20">
         
         {/* Post detail wrapper */}

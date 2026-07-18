@@ -12,6 +12,7 @@ import { axiosClient } from "../utils/axiosClient";
 import ProfileImage from "../Components/ProfileImage";
 import Header from "../Components/Header";
 import PageTransition from "../Components/PageTransition";
+import SEO from "../Components/SEO";
 import { staggerContainer, fadeUp, springPress, scaleIn } from "../utils/motion";
 
 const Messages = () => {
@@ -213,6 +214,7 @@ const Messages = () => {
 
   return (
     <PageTransition>
+      <SEO title="Direct Messages | Traveler" noindex={true} path="/messages" />
       <div className="bg-sand-50 h-[100dvh] overflow-hidden pt-20 pb-24 md:pb-6 flex flex-col" style={{ height: '100dvh' }}>
         <Header
           title="Direct Messages"

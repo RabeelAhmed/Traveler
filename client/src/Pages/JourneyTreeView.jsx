@@ -18,6 +18,7 @@ import AddComment from "../Components/AddComment";
 import Header from "../Components/Header";
 import Loader from "../Components/Loader";
 import PageTransition from "../Components/PageTransition";
+import SEO from "../Components/SEO";
 import { staggerContainer, fadeUp, scaleIn, springPress } from "../utils/motion";
 
 const JourneyTreeView = () => {
@@ -256,6 +257,11 @@ const JourneyTreeView = () => {
 
   return (
     <PageTransition>
+      <SEO
+        title={currentJourney?.title ? `${currentJourney.title} | Journey Tree | Traveler` : "Journey Tree | Traveler"}
+        description={currentJourney?.title ? `Explore "${currentJourney.title}", an interactive step-by-step journey timeline by ${currentJourney.owner?.fullname || 'a traveler'} on Traveler.` : "Explore interactive travel journey timelines on Traveler."}
+        path={`/journey/${id}`}
+      />
       <div className="bg-sand-50 min-h-screen pb-24 pt-20">
         
         {/* Editorial Header */}
