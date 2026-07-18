@@ -176,17 +176,22 @@ const getFeedData = async (req, res) => {
 const getUserProfile = async (req, res) => {
   try {
     const { _id } = req.params;
-    console.log(_id);
+    const curUserId = req.user.user_Id;
+
+    let targetId = _id;
     if (!mongoose.Types.ObjectId.isValid(_id)) {
-      return res.status(400).json({ message: "Invalid user ID format" });
+      const foundUser = await user.findOne({ slug: _id });
+      if (!foundUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      targetId = foundUser._id;
     }
 
-    const curUserId = req.user.user_Id;
-    const cacheKey = `profile:${_id}`;
+    const cacheKey = `profile:${targetId}`;
 
     // We only cache the userProfile + posts; isFollowing is per-viewer so we compute it fresh
     const cached = await remember(cacheKey, TTL.PROFILE, async () => {
-      const userProfile = await user.findById(_id);
+      const userProfile = await user.findById(targetId);
       if (!userProfile) return null;
 
       const allPosts = await userProfile.populate({
@@ -203,25 +208,34 @@ const getUserProfile = async (req, res) => {
 
       const posts = allPosts.posts
         .map((item) => mapPostOutput(item, curUserId))
-        .reverse();
+        .filter((item) => item !== null);
 
-      return { userProfile, posts };
+      return {
+        _id: userProfile._id,
+        fullname: userProfile.fullname,
+        username: userProfile.username,
+        profilePicture: userProfile.profilePicture,
+        followers: userProfile.followers,
+        following: userProfile.following,
+        bio: userProfile.bio,
+        posts: posts,
+        slug: userProfile.slug,
+      };
     });
 
     if (!cached) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    const { userProfile, posts } = cached;
-    const isFollowing = userProfile.followers
-      ? userProfile.followers.some(
+    const isFollowing = cached.followers
+      ? cached.followers.some(
           (id) => id.toString() === curUserId
         )
       : false;
 
     return res.status(200).json({
       success: true,
-      data: { userProfile, posts, isFollowing },
+      data: { userProfile: cached, posts: cached.posts, isFollowing },
     });
   } catch (err) {
     console.error(err);

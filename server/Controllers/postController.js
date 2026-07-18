@@ -426,22 +426,34 @@ const deletePost = async (req, res) => {
 const getPost = async (req, res) => {
   try {
     const { _id } = req.params;
+    const curUserId = req.user?.user_Id || null;
 
-    if (!mongoose.Types.ObjectId.isValid(_id)) {
-      return res.status(400).send(error("Invalid post ID"));
+    let query = {};
+    if (mongoose.Types.ObjectId.isValid(_id)) {
+      query = { _id };
+    } else {
+      query = { slug: _id };
     }
 
-    const curUserId = req.user?.user_Id || null;
-    const cacheKey = `post:${_id}`;
+    let postData = null;
+    if (query._id) {
+      const cacheKey = `post:${query._id}`;
+      postData = await remember(cacheKey, TTL.POST, async () => {
+        const post = await Post.findById(query._id)
+          .populate("userId")
+          .populate("comments.userId");
 
-    const postData = await remember(cacheKey, TTL.POST, async () => {
-      const post = await Post.findById(_id)
+        if (!post) return null;
+        return mapPostOutput(post, curUserId);
+      });
+    } else {
+      const post = await Post.findOne(query)
         .populate("userId")
         .populate("comments.userId");
-
-      if (!post) return null;
-      return mapPostOutput(post, curUserId);
-    });
+      if (post) {
+        postData = mapPostOutput(post, curUserId);
+      }
+    }
 
     if (!postData) {
       return res.status(404).send(error("Post Not Found"));

@@ -24,6 +24,7 @@ import PageTransition from "../Components/PageTransition";
 import VisitedMap from "../Components/VisitedMap";
 import SEO from "../Components/SEO";
 import { FiFolder } from "react-icons/fi";
+import Breadcrumbs from "../Components/Breadcrumbs";
 import { springPress, scaleIn, fadeUp, staggerContainer } from "../utils/motion";
 
 const CountUp = ({ target }) => {
@@ -58,7 +59,7 @@ const CountUp = ({ target }) => {
 };
 
 const Profile = () => {
-  const { id } = useParams();
+  const { slug } = useParams();
   const dispatch = useDispatch();
   const [collaboratingJourneys, setCollaboratingJourneys] = useState([]);
   const navigate = useNavigate();
@@ -66,7 +67,7 @@ const Profile = () => {
 
   const myProfile = useSelector((state) => state.appConfig.myProfile);
   // isOwnerProfile: used for fetching collaborating journeys before owner state is set
-  const isOwnerProfile = myProfile?._id === id;
+  const isOwnerProfile = myProfile?._id === slug || myProfile?.slug === slug;
 
   // Fetch journeys the current user is collaborating on
   useEffect(() => {
@@ -107,16 +108,24 @@ const Profile = () => {
   };
 
   useEffect(() => {
-    if (!id) return;
+    if (!slug) return;
     dispatch(resetProfile());
-    dispatch(getUserProfile(id)).then(() => {
-      if (id === myProfile?._id) {
+    dispatch(getUserProfile(slug)).then((res) => {
+      const fetchedProfile = res.payload?.data?.userProfile || res.payload;
+      if (fetchedProfile && (fetchedProfile._id === myProfile?._id || fetchedProfile.slug === myProfile?.slug)) {
         setOwner(true);
       } else {
         setOwner(false);
       }
     });
-  }, [id, myProfile, dispatch]);
+  }, [slug, myProfile, dispatch]);
+
+  // Redirect legacy ID URLs to slug-based URLs
+  useEffect(() => {
+    if (profile && profile.slug && slug !== profile.slug) {
+      navigate(`/profile/${profile.slug}`, { replace: true });
+    }
+  }, [profile, slug, navigate]);
 
   useEffect(() => {
     if (activeTab === "saved" && savedPosts.length === 0) {
@@ -125,13 +134,13 @@ const Profile = () => {
   }, [activeTab, savedPosts.length, dispatch]);
 
   useEffect(() => {
-    if (activeTab === "collections") {
-      dispatch(getUserCollections(id));
+    if (activeTab === "collections" && profile?._id) {
+      dispatch(getUserCollections(profile._id));
     }
-  }, [activeTab, id, dispatch]);
+  }, [activeTab, profile?._id, dispatch]);
 
   const handleFollow = () => {
-    dispatch(followAndUnfollowUser({ followId: id }));
+    dispatch(followAndUnfollowUser({ followId: profile?._id || slug }));
   };
 
   const handleMessageClick = () => {
@@ -178,7 +187,7 @@ const Profile = () => {
       <SEO
         title={`${profile?.fullname} (@${profile?.username}) | Traveler Profile`}
         description={profile?.bio ? `${profile.bio.substring(0, 150)}` : `Check out ${profile?.fullname}'s travel journals, shared stories, achievements, and mapped journeys on Traveler.`}
-        path={`/profile/${id}`}
+        path={`/profile/${profile?.slug || slug}`}
         image={profile?.profilePicture?.url}
         type="profile"
       >
@@ -193,6 +202,13 @@ const Profile = () => {
 
         {/* Profile Card Container overlay */}
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 -mt-20 md:-mt-24 relative z-10 text-left">
+          <Breadcrumbs
+            items={[
+              { label: "Home", url: "/home" },
+              { label: "Profile" },
+              { label: profile?.fullname || "User" },
+            ]}
+          />
           
           <div className="bg-white rounded-3xl border border-sand-100/80 shadow-[0_8px_30px_rgb(20,41,57,0.02)] p-6 md:p-8 flex flex-col md:flex-row md:items-end justify-between gap-6">
             

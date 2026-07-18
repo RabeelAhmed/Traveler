@@ -20,9 +20,10 @@ import Loader from "../Components/Loader";
 import PageTransition from "../Components/PageTransition";
 import SEO from "../Components/SEO";
 import { staggerContainer, fadeUp, scaleIn, springPress } from "../utils/motion";
+import Breadcrumbs from "../Components/Breadcrumbs";
 
 const JourneyTreeView = () => {
-  const { id } = useParams();
+  const { slug } = useParams();
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const location = useLocation();
@@ -65,11 +66,18 @@ const JourneyTreeView = () => {
   }, []);
 
   useEffect(() => {
-    dispatch(getJourney(id));
+    dispatch(getJourney(slug));
     return () => {
       dispatch(clearCurrentJourney());
     };
-  }, [id, dispatch]);
+  }, [slug, dispatch]);
+
+  // Redirect legacy ID URLs to slug-based URLs
+  useEffect(() => {
+    if (currentJourney && currentJourney.slug && slug !== currentJourney.slug) {
+      navigate(`/journey/${currentJourney.slug}`, { replace: true });
+    }
+  }, [currentJourney, slug, navigate]);
 
   if (status === "loading" && !currentJourney) {
     return <Loader />;
@@ -260,7 +268,7 @@ const JourneyTreeView = () => {
       <SEO
         title={currentJourney?.title ? `${currentJourney.title} | Journey Tree | Traveler` : "Journey Tree | Traveler"}
         description={currentJourney?.title ? `Explore "${currentJourney.title}", an interactive step-by-step journey timeline by ${currentJourney.owner?.fullname || 'a traveler'} on Traveler.` : "Explore interactive travel journey timelines on Traveler."}
-        path={`/journey/${id}`}
+        path={`/journey/${currentJourney?.slug || slug}`}
       />
       <div className="bg-sand-50 min-h-screen pb-24 pt-20">
         
@@ -273,6 +281,13 @@ const JourneyTreeView = () => {
         {/* Tree Header Controls & Owner Information Card */}
         {/* Tree Header Controls & Owner Information Card */}
         <div className="max-w-4xl mx-auto px-4 sm:px-6 mt-6">
+          <Breadcrumbs
+            items={[
+              { label: "Home", url: "/home" },
+              { label: "Destinations", url: "/destinations" },
+              { label: currentJourney?.title || "Journey" },
+            ]}
+          />
           <div className="bg-white rounded-[32px] border border-sand-150 shadow-[0_12px_40px_rgba(20,41,57,0.03)] p-6 flex flex-col sm:flex-row items-center justify-between gap-6 text-left relative overflow-hidden">
             {/* Soft decorative accent background glow */}
             <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-ocean-50/30 to-orange-50/20 rounded-full blur-2xl pointer-events-none" />

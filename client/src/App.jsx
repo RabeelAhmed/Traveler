@@ -44,6 +44,9 @@ const CollectionView = React.lazy(() => import("./Pages/CollectionView"));
 const Messages = React.lazy(() => import("./Pages/Messages"));
 const DestinationReviews = React.lazy(() => import("./Pages/DestinationReviews"));
 const PageNotFound = React.lazy(() => import("./Pages/PageNotFound").then(module => ({ default: module.PageNotFound })));
+const Destinations = React.lazy(() => import("./Pages/Destinations"));
+const DestinationDetail = React.lazy(() => import("./Pages/DestinationDetail"));
+const DiscoveryPages = React.lazy(() => import("./Pages/DiscoveryPages"));
 
 const REACT_APP_SERVER_BASE_URL = import.meta.env.VITE_SERVER_BASE_URL;
 function App() {
@@ -179,43 +182,54 @@ function App() {
       <AnimatePresence mode="wait">
         <React.Suspense fallback={<Loader />}>
           <Routes location={location} key={location.pathname}>
-          <Route path="/underconstruction" element={<UnderConstruction />} />
-          <Route path="/*" element={<PageNotFound />} />
-          <Route path="/post/:id" element={<Post />} />
-          {/* Only show login/signup routes if the user is not logged in */}
-          <Route element={<OnlyIfUserNotLoggedIn />}>
-            <Route path="/" element={<Landing />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/signup" element={<Signup />} /> {/* Corrected */}
-          </Route>
-          {/* Other routes that require authentication */}
-          <Route element={<RequireUser />}>
-            <Route path="/home" element={<Home />} />
-            <Route path="/createpost" element={<CreatePost />} />
-            <Route path="/traveladvisor" element={<TravelAdvisor />} />
-            <Route path="/updateprofile" element={<ProfileUpdate />} />
-            <Route path="/story" element={<Story />} />
-            <Route path="/addstory" element={<UploadStory />} />
-            <Route path="/search" element={<Search />} />
-            <Route path="/journey/:id" element={<JourneyTreeView />} />
-            <Route path="/trending" element={<TrendingDestinations />} />
-            <Route path="/collection/:id" element={<CollectionView />} />
-            <Route path="/messages" element={<Messages />} />
-            <Route path="/reviews" element={<DestinationReviews />} />
-            <Route path="/" element={<FeedLoad />}>
-              <Route path="/forum" element={<Forum />} />
-              
+            {/* Public guest-only pages */}
+            <Route element={<OnlyIfUserNotLoggedIn />}>
+              <Route path="/" element={<Landing />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/signup" element={<Signup />} />
             </Route>
-            <Route path="/profile/:id" element={<Profile />} />
 
-            <Route path="/loader" element={<Loader />} />
-            <Route
-              path="/notification"
-              element={<Notifications notifications={notifications} />}
-            />
-          </Route>
-        </Routes>
+            {/* Public read-only pages (available to both guest and logged-in users) */}
+            <Route path="/underconstruction" element={<UnderConstruction />} />
+            <Route path="/post/:slug" element={<Post />} />
+            <Route path="/destinations" element={<Destinations />} />
+            <Route path="/destinations/:slug" element={<DestinationDetail />} />
+            <Route path="/travel-guides" element={<DiscoveryPages />} />
+            <Route path="/travel-tips" element={<DiscoveryPages />} />
+            <Route path="/top-rated-destinations" element={<DiscoveryPages />} />
+            <Route path="/hidden-gems-pakistan" element={<DiscoveryPages />} />
+            
+            {/* Authenticated routes */}
+            <Route element={<RequireUser />}>
+              <Route path="/home" element={<Home />} />
+              <Route path="/createpost" element={<CreatePost />} />
+              <Route path="/traveladvisor" element={<TravelAdvisor />} />
+              <Route path="/updateprofile" element={<ProfileUpdate />} />
+              <Route path="/story" element={<Story />} />
+              <Route path="/addstory" element={<UploadStory />} />
+              <Route path="/search" element={<Search />} />
+              <Route path="/journey/:slug" element={<JourneyTreeView />} />
+              <Route path="/trending" element={<TrendingDestinations />} />
+              <Route path="/collection/:id" element={<CollectionView />} />
+              <Route path="/messages" element={<Messages />} />
+              <Route path="/reviews" element={<DestinationReviews />} />
+              <Route path="/profile/:slug" element={<Profile />} />
+              
+              <Route path="/" element={<FeedLoad />}>
+                <Route path="/forum" element={<Forum />} />
+              </Route>
+              
+              <Route path="/loader" element={<Loader />} />
+              <Route
+                path="/notification"
+                element={<Notifications notifications={notifications} />}
+              />
+            </Route>
+
+            {/* Catch-all 404 */}
+            <Route path="/*" element={<PageNotFound />} />
+          </Routes>
         </React.Suspense>
       </AnimatePresence>
     </>
