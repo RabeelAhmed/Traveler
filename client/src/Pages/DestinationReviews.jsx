@@ -12,7 +12,6 @@ import {
 import ReviewCard from "../Components/ReviewCard";
 import Header from "../Components/Header";
 import PageTransition from "../Components/PageTransition";
-import SEO from "../Components/SEO";
 import { staggerContainer, fadeUp, springPress } from "../utils/motion";
 
 const DestinationReviews = () => {
@@ -78,59 +77,8 @@ const DestinationReviews = () => {
     ? Math.max(...Object.values(summary.ratingBreakdown), 1)
     : 1;
 
-  const hasReviews = reviews && reviews.length > 0;
-  const ratingValue = summary?.avgRating || 0;
-  const reviewCount = summary?.totalReviews || reviews?.length || 0;
-
-  const jsonLdSchema = {
-    "@context": "https://schema.org",
-    "@type": "Place",
-    "name": location || "Destination",
-    "description": `Traveler reviews and travel guide for ${location || "Pakistan destinations"}.`,
-    "address": {
-      "@type": "PostalAddress",
-      "addressCountry": "PK"
-    },
-    ...(reviewCount > 0 ? {
-      "aggregateRating": {
-        "@type": "AggregateRating",
-        "ratingValue": ratingValue.toFixed(1),
-        "reviewCount": reviewCount,
-        "bestRating": "5",
-        "worstRating": "1"
-      }
-    } : {}),
-    ...(hasReviews ? {
-      "review": reviews.slice(0, 5).map((rev) => ({
-        "@type": "Review",
-        "reviewRating": {
-          "@type": "Rating",
-          "ratingValue": rev.rating,
-          "bestRating": "5",
-          "worstRating": "1"
-        },
-        "name": rev.title,
-        "author": {
-          "@type": "Person",
-          "name": rev.author?.fullname || rev.author?.username || "Traveler User"
-        },
-        "datePublished": rev.createdAt || rev.visitedAt,
-        "reviewBody": rev.body
-      }))
-    } : {})
-  };
-
   return (
     <PageTransition>
-      <SEO
-        title={location ? `${location} Reviews & Travel Guide | Traveler` : "Destination Reviews | Traveler"}
-        description={location ? `Read reviews, ratings, and local travel guide details for ${location}, Pakistan. Share your own experience and tips with the traveler community.` : "Browse destination reviews and travel guides shared by the traveler community in Pakistan."}
-        path={`/reviews?location=${encodeURIComponent(location)}`}
-      >
-        <script type="application/ld+json">
-          {JSON.stringify(jsonLdSchema)}
-        </script>
-      </SEO>
       <div className="bg-sand-50 min-h-screen pb-28 pt-20">
         <Header title={location || "Destination Reviews"} />
 

@@ -11,7 +11,6 @@ import { useDispatch, useSelector } from "react-redux";
 import L from "leaflet";
 import Header from "../Components/Header";
 import Logo from "../assets/Images/logoColor.png";
-import SEO from "../Components/SEO";
 import { getStoryData, likeAndUnlikeStory } from "../Toolkit/slices/storySlice";
 import { fetchLiveUsers } from "../Toolkit/slices/liveSlice";
 import { springPress, scaleIn, fadeUp } from "../utils/motion";
@@ -163,7 +162,6 @@ const Story = () => {
 
   return (
     <div className="bg-sand-50 min-h-screen pb-20 pt-20">
-      <SEO title="Travel Stories | Traveler" noindex={true} path="/story" />
       
       {/* Title section header */}
       <Header

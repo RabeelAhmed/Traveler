@@ -38,11 +38,8 @@ connectDB();
 
 const db = mongoose.connection;
 
-const { runMigration } = require('./Utils/seeder');
-
 db.on('connected',()=>{
-    console.log("✓ MongoDB Connected");
-    runMigration();
+    console.log("✓ MongoDB Connected")
 })
 db.on('error',(err)=>{
     // Only log active runtime errors if the connection is established to avoid duplicate/confusing boot-up logs

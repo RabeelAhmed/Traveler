@@ -8,7 +8,6 @@ import {
   HiChevronDown,
 } from "react-icons/hi";
 import PageTransition from "../Components/PageTransition";
-import SEO from "../Components/SEO";
 import {
   staggerContainer,
   fadeUp,
@@ -22,38 +21,7 @@ const Landing = () => {
 
   return (
     <PageTransition>
-      <SEO
-        title="Traveler — Social Network for Travelers | Share Stories, Plan Journeys, Discover Pakistan"
-        description="Traveler is the ultimate travel social network. Share geo-pinned map stories, track your trip milestones, collaborate on plans with friends, get AI recommendations, and earn badges."
-        path="/"
-      >
-        <script type="application/ld+json">
-          {JSON.stringify([
-            {
-              "@context": "https://schema.org",
-              "@type": "WebSite",
-              "name": "Traveler",
-              "url": "https://traveler-social.netlify.app",
-              "potentialAction": {
-                "@type": "SearchAction",
-                "target": {
-                  "@type": "EntryPoint",
-                  "urlTemplate": "https://traveler-social.netlify.app/search?query={search_term_string}"
-                },
-                "query-input": "required name=search_term_string"
-              }
-            },
-            {
-              "@context": "https://schema.org",
-              "@type": "Organization",
-              "name": "Traveler",
-              "url": "https://traveler-social.netlify.app",
-              "logo": "https://traveler-social.netlify.app/Logo.png"
-            }
-          ])}
-        </script>
-      </SEO>
-      <main className="overflow-x-hidden bg-sand-50">
+      <div className="overflow-x-hidden bg-sand-50">
         
         {/* SECTION 1 — Hero */}
         <section className="relative h-screen flex items-center justify-center overflow-hidden">
@@ -247,7 +215,7 @@ const Landing = () => {
           </motion.div>
         </section>
 
-      </main>
+      </div>
     </PageTransition>
   );
 };

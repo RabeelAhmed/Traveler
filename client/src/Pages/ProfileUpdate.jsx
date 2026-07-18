@@ -6,8 +6,6 @@ import { HiCheck } from "react-icons/hi";
 import { axiosClient } from "../utils/axiosClient";
 import Header from "../Components/Header";
 import PageTransition from "../Components/PageTransition";
-import SEO from "../Components/SEO";
-import imageCompression from "browser-image-compression";
 import { springPress, scaleIn, fadeUp } from "../utils/motion";
 
 export const ProfileUpdate = () => {
@@ -65,18 +63,7 @@ export const ProfileUpdate = () => {
     });
 
     if (profileImage) {
-      let compressedPic = profileImage;
-      try {
-        compressedPic = await imageCompression(profileImage, {
-          maxSizeMB: 1,
-          maxWidthOrHeight: 800,
-          useWebWorker: true,
-          initialQuality: 0.85,
-        });
-      } catch (err) {
-        console.error("Image compression failed, using original:", err);
-      }
-      updateData.append("profilePicture", compressedPic);
+      updateData.append("profilePicture", profileImage);
     }
 
     try {
@@ -95,7 +82,6 @@ export const ProfileUpdate = () => {
 
   return (
     <PageTransition>
-      <SEO title="Edit Profile | Traveler" noindex={true} path="/updateprofile" />
       <div className="bg-sand-50 min-h-screen pb-24 pt-20">
         
         {/* Settings Header */}

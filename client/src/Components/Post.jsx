@@ -101,7 +101,7 @@ const Post = ({ post, scrollToComment, openMobileComments }) => {
       {/* Media Carousel / Hero Element */}
       {hasMedia ? (
         <div className="w-full relative bg-sand-900 group">
-          <Carousel data={post.media} altPrefix={`${post?.title || ""} — ${post?.location || ""}`} />
+          <Carousel data={post.media} />
           
           {/* Floating Glass-Dark Action Bar */}
           <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-black/60 backdrop-blur-md border border-white/10 px-4 py-2.5 rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.3)] z-30">

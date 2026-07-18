@@ -10,12 +10,6 @@ const userSchema = new Schema({
     unique: true,
     trim: true,
   },
-  slug: {
-    type: String,
-    unique: true,
-    sparse: true,
-    trim: true,
-  },
   fullname: {
     type: String,
     required: true,
@@ -105,37 +99,6 @@ const userSchema = new Schema({
     type: Date,
     default: Date.now,
   },
-});
-
-userSchema.pre('save', async function (next) {
-  if (this.isModified('fullname') || !this.slug) {
-    const slugify = (text) => {
-      if (!text) return "";
-      return text
-        .toString()
-        .toLowerCase()
-        .trim()
-        .replace(/\s+/g, "-")
-        .replace(/[^\w\-]+/g, "")
-        .replace(/\-\-+/g, "-")
-        .replace(/^-+/, "")
-        .replace(/-+$/, "");
-    };
-    
-    let baseSlug = slugify(this.fullname || this.username || 'user');
-    let uniqueSlug = baseSlug;
-    let count = 1;
-    while (true) {
-      const existing = await this.constructor.findOne({ slug: uniqueSlug, _id: { $ne: this._id } });
-      if (!existing) {
-        break;
-      }
-      uniqueSlug = `${baseSlug}-${count}`;
-      count++;
-    }
-    this.slug = uniqueSlug;
-  }
-  next();
 });
 
 userSchema.pre('save',async function (next){

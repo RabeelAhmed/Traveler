@@ -92,7 +92,7 @@ const Navbar = () => {
 
   return (
     <>
-      <nav
+      <div
         className={`fixed top-0 left-0 w-full z-40 transition-all duration-500 ease-in-out flex items-center justify-between px-6 sm:px-8 md:px-12 ${
           isCompact
             ? "glass-light py-3 border-b border-sand-200/80 shadow-[0_8px_30px_rgb(20,41,57,0.04)] text-sand-800"
@@ -123,7 +123,7 @@ const Navbar = () => {
               >
                 <img
                   src={myProfile?.profilePicture?.url || ""}
-                  alt={`${myProfile?.fullname || "User"}'s profile picture`}
+                  alt="User"
                   className="w-8 h-8 object-cover rounded-full border border-sand-200/80"
                 />
               </motion.button>
@@ -222,7 +222,7 @@ const Navbar = () => {
               >
                 <img
                   src={myProfile?.profilePicture?.url || ""}
-                  alt={`${myProfile?.fullname || "User"}'s profile picture`}
+                  alt="User"
                   className={`w-9 h-9 object-cover rounded-full border-2 transition-all duration-300 ${
                     isCompact ? "border-ocean-500" : "border-white"
                   }`}
@@ -277,7 +277,7 @@ const Navbar = () => {
             </div>
           </div>
         )}
-      </nav>
+      </div>
 
       {/* Mobile Bottom Tab Bar */}
       <MobileTabBar />

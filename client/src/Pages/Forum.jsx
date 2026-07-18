@@ -6,7 +6,6 @@ import PostCard from "../Components/PostCard";
 import PostCardSkeleton from "../Components/PostCardSkeleton";
 import { LeftRail, RightDiscovery } from "../Components/Sidebar";
 import PageTransition from "../Components/PageTransition";
-import SEO from "../Components/SEO";
 import { staggerContainer, fadeUp } from "../utils/motion";
 
 const Forum = () => {
@@ -37,7 +36,6 @@ const Forum = () => {
 
   return (
     <PageTransition>
-      <SEO title="Traveler Forum | Traveler" noindex={true} path="/forum" />
       <div className="bg-sand-50 min-h-screen pb-20">
         {/* Editorial Header */}
         <Header

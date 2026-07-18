@@ -9,7 +9,6 @@ import Header from "../Components/Header";
 import MoreInfoModal from "../Components/MoreInfoModel";
 import { toast } from "react-hot-toast";
 import PageTransition from "../Components/PageTransition";
-import SEO from "../Components/SEO";
 import { springPress, scaleIn, fadeUp, staggerContainer } from "../utils/motion";
 import agentClient from "../utils/agentClient";
 
@@ -174,11 +173,6 @@ const TravelAdvisor = () => {
 
   return (
     <PageTransition>
-      <SEO
-        title="AI Travel Recommendations | Traveler"
-        description="Get personalized AI travel recommendations for destinations in Pakistan. Find the best places to visit by category, province, and user reviews."
-        path="/traveladvisor"
-      />
       <div className="bg-sand-50 min-h-screen pb-24 pt-20">
         
         <Header

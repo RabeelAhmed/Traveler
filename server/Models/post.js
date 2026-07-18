@@ -7,12 +7,6 @@ const postSchema = new Schema({
     ref: "user", // Reference to the user who made the post
     required: true,
   },
-  slug: {
-    type: String,
-    unique: true,
-    sparse: true,
-    trim: true,
-  },
   title: {
     type: String,
     required: true,
@@ -101,37 +95,6 @@ const postSchema = new Schema({
       },
     },
   ],
-});
-
-postSchema.pre("save", async function (next) {
-  if (this.isModified("title") || !this.slug) {
-    const slugify = (text) => {
-      if (!text) return "";
-      return text
-        .toString()
-        .toLowerCase()
-        .trim()
-        .replace(/\s+/g, "-")
-        .replace(/[^\w\-]+/g, "")
-        .replace(/\-\-+/g, "-")
-        .replace(/^-+/, "")
-        .replace(/-+$/, "");
-    };
-
-    let baseSlug = slugify(this.title || "post");
-    let uniqueSlug = baseSlug;
-    let count = 1;
-    while (true) {
-      const existing = await this.constructor.findOne({ slug: uniqueSlug, _id: { $ne: this._id } });
-      if (!existing) {
-        break;
-      }
-      uniqueSlug = `${baseSlug}-${count}`;
-      count++;
-    }
-    this.slug = uniqueSlug;
-  }
-  next();
 });
 
 postSchema.pre("findOneAndDelete", async function (next) {

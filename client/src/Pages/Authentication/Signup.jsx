@@ -9,7 +9,6 @@ import StepperControl from "../../Components/StepperControl";
 import Complete from "./steps/Complete";
 import authPng from "../../assets/Images/NewYork-pana1.png";
 import PageTransition from "../../Components/PageTransition";
-import SEO from "../../Components/SEO";
 import { scaleIn } from "../../utils/motion";
 
 const Signup = () => {
@@ -140,7 +139,6 @@ const Signup = () => {
 
   return (
     <PageTransition>
-      <SEO title="Signup | Traveler" noindex={true} path="/signup" />
       <div className="min-h-screen bg-sand-50 grid grid-cols-1 md:grid-cols-7 relative overflow-hidden">
         {/* Left Section - Shared Illustration Panel */}
         <motion.div

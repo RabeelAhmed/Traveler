@@ -41,7 +41,7 @@ const ReviewCard = ({ review }) => {
   };
 
   return (
-    <motion.article
+    <motion.div
       variants={fadeUp}
       className="bg-white rounded-3xl shadow-[0_4px_20px_rgb(20,41,57,0.06)] border border-sand-100/60 p-5 sm:p-6"
     >
@@ -50,8 +50,7 @@ const ReviewCard = ({ review }) => {
         <Link to={`/profile/${author?._id}`} className="flex-shrink-0">
           <img
             src={author?.profilePicture?.url || "/default-profile.png"}
-            alt={`${author?.fullname || "User"}'s profile picture`}
-            loading="lazy"
+            alt={author?.fullname}
             className="w-10 h-10 rounded-full object-cover border-2 border-sand-100"
           />
         </Link>
@@ -117,7 +116,7 @@ const ReviewCard = ({ review }) => {
           </motion.button>
         )}
       </div>
-    </motion.article>
+    </motion.div>
   );
 };
 

@@ -11,14 +11,12 @@ import AddComment from "../Components/AddComment";
 import { PageNotFound } from "./PageNotFound";
 import Loader from "../Components/Loader";
 import PageTransition from "../Components/PageTransition";
-import SEO from "../Components/SEO";
 import { fadeUp, staggerContainer } from "../utils/motion";
-import Breadcrumbs from "../Components/Breadcrumbs";
 import ReviewCard from "../Components/ReviewCard";
 import { getReviewsForLocation } from "../Toolkit/slices/reviewSlice";
 
 const Post = () => {
-  const { slug } = useParams();
+  const { id } = useParams();
   const dispatch = useDispatch();
   const commentSectionRef = useRef(null);
   const navigate = useNavigate();
@@ -32,7 +30,7 @@ const Post = () => {
   const feed = useSelector((state) => state.feed.feed);
   const feedStatus = useSelector((state) => state.feed.status);
 
-  const post = feed.find((post) => post.id === slug || post.slug === slug);
+  const post = feed.find((post) => post.id === id);
 
   const [showMobileComments, setShowMobileComments] = useState(false);
 
@@ -46,16 +44,9 @@ const Post = () => {
   // Load post if not in Redux store
   useEffect(() => {
     if (!post && feedStatus !== "loading") {
-      dispatch(fetchPostById(slug));
+      dispatch(fetchPostById(id));
     }
-  }, [slug, dispatch, post, feedStatus]);
-
-  // Redirect legacy ID URLs to slug-based URLs
-  useEffect(() => {
-    if (post && post.slug && slug !== post.slug) {
-      navigate(`/post/${post.slug}`, { replace: true });
-    }
-  }, [post, slug, navigate]);
+  }, [id, dispatch, post, feedStatus]);
 
   // Load reviews for the post location
   const postLocation = post?.location;
@@ -92,49 +83,12 @@ const Post = () => {
     navigate("/login", { state: { from: location }, replace: true });
   };
 
-  const jsonLdSchema = {
-    "@context": "https://schema.org",
-    "@type": "SocialMediaPosting",
-    "headline": post?.title,
-    "image": post?.media?.map((m) => m.url) || [],
-    "datePublished": post?.postingDate,
-    "description": post?.description?.substring(0, 150),
-    "author": {
-      "@type": "Person",
-      "name": post?.owner?.name || "Traveler User"
-    }
-  };
-
   return (
     <PageTransition>
-      <SEO
-        title={`${post?.title} | Traveler`}
-        description={post?.description ? post.description.substring(0, 150) : "View this travel story shared on Traveler."}
-        path={`/post/${post?.slug || slug}`}
-        image={post?.media?.[0]?.url}
-        type="article"
-      >
-        <script type="application/ld+json">
-          {JSON.stringify(jsonLdSchema)}
-        </script>
-      </SEO>
       <div className="bg-sand-50 min-h-screen pb-24 pt-20">
         
         {/* Post detail wrapper */}
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 md:px-8">
-          <Breadcrumbs
-            items={[
-              { label: "Home", url: "/home" },
-              { label: "Destinations", url: "/destinations" },
-              {
-                label: post?.location || "Post",
-                url: post?.location
-                  ? `/destinations/${post.location.toLowerCase().replace(/\s+/g, "-")}`
-                  : undefined,
-              },
-              { label: post?.title },
-            ]}
-          />
+        <div className="max-w-4xl mx-auto px-0 sm:px-6 md:px-8">
           
           <motion.div
             variants={fadeUp}

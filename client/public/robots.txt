@@ -1,7 +1,0 @@
-User-agent: *
-Allow: /
-Disallow: /login
-Disallow: /signup
-Disallow: /messages
-Disallow: /profile-update
-Sitemap: https://traveler-social.netlify.app/sitemap.xml

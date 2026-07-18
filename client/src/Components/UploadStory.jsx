@@ -9,7 +9,6 @@ import { toast } from "react-hot-toast";
 import { addedStory } from "../Toolkit/slices/storySlice";
 import Header from "./Header";
 import PageTransition from "./PageTransition";
-import imageCompression from "browser-image-compression";
 import { springPress, scaleIn, fadeUp } from "../utils/motion";
 
 const UploadStory = () => {
@@ -115,22 +114,9 @@ const UploadStory = () => {
       setProgress(0);
       setLocationError(false);
 
-      let fileToUpload = file;
-      if (file.type.startsWith("image/")) {
-        try {
-          fileToUpload = await imageCompression(file, {
-            maxSizeMB: 1,
-            useWebWorker: true,
-            initialQuality: 0.85,
-          });
-        } catch (err) {
-          console.error("Image compression failed, using original:", err);
-        }
-      }
-
       // Upload to backend `/story/upload-media`
       const formData = new FormData();
-      formData.append("file", fileToUpload);
+      formData.append("file", file);
 
       const uploadRes = await axiosClient.post("/story/upload-media", formData, {
         headers: {

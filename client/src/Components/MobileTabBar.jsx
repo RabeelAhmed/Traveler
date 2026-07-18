@@ -71,7 +71,7 @@ const MobileTabBar = () => {
   ];
 
   return (
-    <nav className="md:hidden fixed bottom-0 inset-x-0 z-50 glass-light border-t border-sand-200/80 px-3 pb-5 pt-2 shadow-[0_-8px_30px_rgb(20,41,57,0.06)]">
+    <div className="md:hidden fixed bottom-0 inset-x-0 z-50 glass-light border-t border-sand-200/80 px-3 pb-5 pt-2 shadow-[0_-8px_30px_rgb(20,41,57,0.06)]">
       <div className="flex justify-between items-center relative">
         {tabItems.map((tab, index) => {
           const isActive = location.pathname === tab.path;
@@ -110,7 +110,7 @@ const MobileTabBar = () => {
                   {tab.isProfile ? (
                     <img
                       src={myProfile?.profilePicture?.url || ""}
-                      alt={`${myProfile?.fullname || "User"}'s profile picture`}
+                      alt="User"
                       className={`w-7 h-7 object-cover rounded-full border-2 transition-all duration-300 ${
                         isActive ? "border-ocean-600 scale-105" : "border-sand-300"
                       }`}
@@ -149,7 +149,7 @@ const MobileTabBar = () => {
           );
         })}
       </div>
-    </nav>
+    </div>
   );
 };
 

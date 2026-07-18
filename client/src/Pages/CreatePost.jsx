@@ -13,7 +13,6 @@ import { Tooltip } from "react-tooltip";
 import { uploadImagesToCloudinary } from "../utils/cloudinaryUpload";
 import Header from "../Components/Header";
 import PageTransition from "../Components/PageTransition";
-import SEO from "../Components/SEO";
 import JourneyComposerToggle from "../Components/JourneyComposerToggle";
 import { springPress, scaleIn, fadeUp } from "../utils/motion";
 
@@ -233,7 +232,6 @@ const CreatePost = () => {
 
   return (
     <PageTransition>
-      <SEO title="Create Post | Traveler" noindex={true} path="/createpost" />
       <div className="bg-sand-50 min-h-screen pb-24 pt-20">
         
         {/* Settings Header */}

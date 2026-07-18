@@ -6,7 +6,6 @@ import { toast } from "react-hot-toast";
 import { axiosClient } from "../../utils/axiosClient";
 import TravelerLogo from "../../Components/TravelerLogo";
 import PageTransition from "../../Components/PageTransition";
-import SEO from "../../Components/SEO";
 import { springPress, scaleIn } from "../../utils/motion";
 
 function ResetPassword() {
@@ -67,7 +66,6 @@ function ResetPassword() {
 
   return (
     <PageTransition>
-      <SEO title="Reset Password | Traveler" noindex={true} path="/reset-password" />
       <div className="min-h-screen flex flex-col items-center justify-center bg-sand-50 px-4 sm:px-6">
         
         {/* Centered card wrapper */}

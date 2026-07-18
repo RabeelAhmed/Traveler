@@ -11,7 +11,6 @@ import PostCard from "../Components/PostCard";
 import Header from "../Components/Header";
 import Loader from "../Components/Loader";
 import PageTransition from "../Components/PageTransition";
-import SEO from "../Components/SEO";
 import { staggerContainer, fadeUp, springPress } from "../utils/motion";
 
 const CollectionView = () => {
@@ -107,7 +106,6 @@ const CollectionView = () => {
 
   return (
     <PageTransition>
-      <SEO title="Collection | Traveler" noindex={true} path={`/collection/${id}`} />
       <div className="bg-sand-50 min-h-screen pb-24 pt-20">
         <Header
           title={activeCollection.name}

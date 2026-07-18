@@ -113,8 +113,6 @@ app.use('/collection', require('./Routers/collectionRouter'));
 app.use('/message',    require('./Routers/messageRouter'));
 app.use('/review',     require('./Routers/reviewRouter'));
 app.use('/live',       require('./Routers/liveRouter'));
-app.use('/sitemap.xml', require('./Routers/sitemapRouter'));
-app.use('/destinations', require('./Routers/destinationRouter'));
 
 // ── Health Check ──
 app.get('/health', (req, res) => {

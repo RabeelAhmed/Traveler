@@ -16,7 +16,6 @@ import toast from "react-hot-toast";
 import Loader from "../Components/Loader";
 import logo from "../assets/Images/traveler_logo_animated.gif";
 import { useSocketAvailability } from "../hooks/useSocketAvailability";
-import SEO from "../Components/SEO";
 import {
   staggerContainer,
   fadeUp,
@@ -267,7 +266,6 @@ function Home() {
           "url('https://res.cloudinary.com/djiqzvcev/image/upload/v1735323187/Profile_Pictures/z85wimxtvordqrr9u3sd.png')",
       }}
     >
-      <SEO title="Home | Traveler" noindex={true} path="/home" />
       {/* Immersive Dark Glass Gradient Overlay */}
       <div className="absolute inset-0 bg-gradient-to-t from-ocean-950/95 via-ocean-950/35 to-transparent z-0" />
 

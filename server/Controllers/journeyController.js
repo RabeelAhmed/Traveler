@@ -226,14 +226,7 @@ const getJourney = async (req, res) => {
     const { id } = req.params;
     const curUserId = req.user?.user_Id;
 
-    let query = {};
-    if (mongoose.Types.ObjectId.isValid(id)) {
-      query = { _id: id };
-    } else {
-      query = { slug: id };
-    }
-
-    const journey = await Journey.findOne(query)
+    const journey = await Journey.findById(id)
       .populate("owner", "fullname username profilePicture")
       .populate("collaborators", "fullname username profilePicture")
       .populate("pendingInvites", "fullname username profilePicture")

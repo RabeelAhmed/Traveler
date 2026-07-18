@@ -89,7 +89,7 @@ const PostCard = ({ post }) => {
   const heroImageUrl = post?.media?.[0]?.url;
 
   return (
-    <article
+    <div
       onClick={openPost}
       className="bg-white rounded-3xl border border-sand-100/80 shadow-[0_8px_30px_rgb(20,41,57,0.02)] overflow-hidden cursor-pointer hover:shadow-[0_8px_30px_rgb(20,41,57,0.04)] hover:-translate-y-0.5 transition-all duration-300 mb-6 text-left"
     >
@@ -98,8 +98,7 @@ const PostCard = ({ post }) => {
         <div className="w-full h-48 md:h-64 overflow-hidden relative">
           <img
             src={heroImageUrl}
-            alt={`${post?.title || ""} — ${post?.location || ""}`}
-            loading="lazy"
+            alt={post?.title}
             className="w-full h-full object-cover hover:scale-[1.02] transition-transform duration-700 ease-out"
           />
         </div>
@@ -240,7 +239,7 @@ const PostCard = ({ post }) => {
         isOpen={showCollectionModal}
         onClose={() => setShowCollectionModal(false)}
       />
-    </article>
+    </div>
   );
 };
 
