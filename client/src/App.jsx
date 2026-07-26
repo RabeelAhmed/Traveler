@@ -179,9 +179,9 @@ function App() {
       {/* Socket.IO unavailability modal — renders globally, triggered by useSocketAvailability hook */}
       <SocketUnavailableModal />
       <Navbar />
-      <AnimatePresence mode="wait">
+      <AnimatePresence mode="sync">
         <React.Suspense fallback={<Loader />}>
-          <Routes location={location} key={location.pathname}>
+          <Routes>
             {/* Public guest-only pages */}
             <Route element={<OnlyIfUserNotLoggedIn />}>
               <Route path="/" element={<Landing />} />
