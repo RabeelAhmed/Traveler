@@ -44,9 +44,6 @@ const CollectionView = React.lazy(() => import("./Pages/CollectionView"));
 const Messages = React.lazy(() => import("./Pages/Messages"));
 const DestinationReviews = React.lazy(() => import("./Pages/DestinationReviews"));
 const PageNotFound = React.lazy(() => import("./Pages/PageNotFound").then(module => ({ default: module.PageNotFound })));
-const Destinations = React.lazy(() => import("./Pages/Destinations"));
-const DestinationDetail = React.lazy(() => import("./Pages/DestinationDetail"));
-const DiscoveryPages = React.lazy(() => import("./Pages/DiscoveryPages"));
 
 const REACT_APP_SERVER_BASE_URL = import.meta.env.VITE_SERVER_BASE_URL;
 function App() {
@@ -190,15 +187,9 @@ function App() {
               <Route path="/signup" element={<Signup />} />
             </Route>
 
-            {/* Public read-only pages (available to both guest and logged-in users) */}
+            {/* Public read-only pages */}
             <Route path="/underconstruction" element={<UnderConstruction />} />
-            <Route path="/post/:slug" element={<Post />} />
-            <Route path="/destinations" element={<Destinations />} />
-            <Route path="/destinations/:slug" element={<DestinationDetail />} />
-            <Route path="/travel-guides" element={<DiscoveryPages />} />
-            <Route path="/travel-tips" element={<DiscoveryPages />} />
-            <Route path="/top-rated-destinations" element={<DiscoveryPages />} />
-            <Route path="/hidden-gems-pakistan" element={<DiscoveryPages />} />
+            <Route path="/post/:id" element={<Post />} />
             
             {/* Authenticated routes */}
             <Route element={<RequireUser />}>
@@ -209,12 +200,12 @@ function App() {
               <Route path="/story" element={<Story />} />
               <Route path="/addstory" element={<UploadStory />} />
               <Route path="/search" element={<Search />} />
-              <Route path="/journey/:slug" element={<JourneyTreeView />} />
+              <Route path="/journey/:id" element={<JourneyTreeView />} />
               <Route path="/trending" element={<TrendingDestinations />} />
               <Route path="/collection/:id" element={<CollectionView />} />
               <Route path="/messages" element={<Messages />} />
               <Route path="/reviews" element={<DestinationReviews />} />
-              <Route path="/profile/:slug" element={<Profile />} />
+              <Route path="/profile/:id" element={<Profile />} />
               
               <Route path="/" element={<FeedLoad />}>
                 <Route path="/forum" element={<Forum />} />
