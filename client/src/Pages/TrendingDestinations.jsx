@@ -187,11 +187,10 @@ const DestCard = ({ dest, index, isHovered, onHover, onClick }) => {
                 initial={{ width: 0 }}
                 animate={{ width: `${Math.min(100, Math.max(15, dest.postCount * 15))}%` }}
                 transition={{ delay: 0.2, duration: 0.7, ease: "easeOut" }}
-                className={`h-full rounded-full ${
-                  isTop3
-                    ? "bg-gradient-to-r from-sunset-400 to-amber-400"
-                    : "bg-gradient-to-r from-ocean-400 to-ocean-600"
-                }`}
+                className={`h-full rounded-full ${isTop3
+                  ? "bg-gradient-to-r from-sunset-400 to-amber-400"
+                  : "bg-gradient-to-r from-ocean-400 to-ocean-600"
+                  }`}
               />
             </div>
           </div>
@@ -237,7 +236,7 @@ const TrendingDestinations = () => {
     <PageTransition>
       <div className="bg-sand-50 min-h-screen pb-24">
         {/* ── Hero Header Banner ── */}
-        <div className="relative overflow-hidden bg-gradient-to-br from-ocean-950 via-ocean-900 to-ocean-800 pt-28 pb-20 text-white">
+        <div className="relative overflow-hidden bg-gradient-to-br from-ocean-950 via-ocean-900 to-ocean-800 pt-24 pb-12 text-white">
           {/* Decorative ambient background glows */}
           <div className="absolute top-0 right-1/4 w-96 h-96 rounded-full bg-sunset-500/15 blur-3xl pointer-events-none" />
           <div className="absolute bottom-0 left-10 w-80 h-80 rounded-full bg-ocean-400/20 blur-3xl pointer-events-none" />
@@ -332,9 +331,9 @@ const TrendingDestinations = () => {
         </div>
 
         {/* ── Main Content Grid ── */}
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 -mt-8 relative z-20">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 mt-4 relative z-20">
           {status === "loading" ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pt-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pb-6">
               {Array.from({ length: 6 }).map((_, i) => (
                 <DestSkeleton key={i} />
               ))}
@@ -372,7 +371,7 @@ const TrendingDestinations = () => {
               variants={staggerContainer(0.06, 0.04)}
               initial="hidden"
               animate="visible"
-              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pt-6"
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pb-6"
             >
               {filteredDestinations.map((dest, index) => (
                 <DestCard
