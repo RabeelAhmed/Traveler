@@ -270,7 +270,7 @@ export const RightDiscovery = () => {
 
                   {/* Location name + count */}
                   <div className="flex-1 min-w-0">
-                    <p className="font-display font-extrabold text-xs text-sand-800 truncate leading-tight group-hover:text-ocean-600 transition-colors">
+                    <p className="font-display font-extrabold text-xs text-sand-800 truncate leading-tight group-hover:text-ocean-600 transition-colors capitalize">
                       {dest.location}
                     </p>
                     <p className="font-sans text-[10px] text-sand-400 font-semibold mt-0.5">
