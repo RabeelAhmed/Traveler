@@ -26,7 +26,7 @@ const Messages = () => {
   const myProfile = useSelector((state) => state.appConfig.myProfile);
   const curUserId = myProfile?._id;
   
-  const { conversations, activeConversation, messages, status } = useSelector((state) => state.message);
+  const { conversations, activeConversation, messages, status, hasMore } = useSelector((state) => state.message);
 
   const [text, setText] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -98,6 +98,22 @@ const Messages = () => {
       setMobileView("chat");
     }
   }, [activeConversation?._id, dispatch]);
+
+  // Poll only when sockets are unavailable; recursive scheduling prevents overlap.
+  useEffect(() => {
+    if (socket || !activeConversation?._id) return;
+    let cancelled = false;
+    let timer;
+    const refresh = async () => {
+      if (!document.hidden) {
+        await dispatch(getMessages({ conversationId: activeConversation._id, silent: true }));
+        if (!cancelled) await dispatch(getConversations());
+      }
+      if (!cancelled) timer = setTimeout(refresh, 10000);
+    };
+    timer = setTimeout(refresh, 10000);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [socket, activeConversation?._id, dispatch]);
 
   // Scroll to bottom on new messages
   useEffect(() => {
@@ -180,18 +196,12 @@ const Messages = () => {
     }
 
     try {
-      const response = await dispatch(
+      await dispatch(
         sendMessage({ conversationId: activeConversation._id, text: currentText })
       ).unwrap();
 
-      // Emit sendMessage socket event
-      if (otherParticipantId) {
-        socket?.emit("sendMessage", {
-          recipientId: otherParticipantId,
-          message: response,
-        });
-      }
     } catch (err) {
+      setText(currentText);
       console.error("Failed to send message:", err);
     }
   };
@@ -372,6 +382,9 @@ const Messages = () => {
 
                 {/* Messages List Area */}
                 <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-sand-50/20 custom-scrollbar flex flex-col">
+                  {hasMore && messages.length > 0 && (
+                    <button type="button" disabled={status === 'loading'} className="text-sm text-ocean-700 p-2" onClick={() => dispatch(getMessages({ conversationId: activeConversation._id, before: messages[0]._id }))}>Load older messages</button>
+                  )}
                   {status === "loading" && messages.length === 0 ? (
                     /* Shimmer bubble loading skeleton */
                     Array.from({ length: 5 }).map((_, i) => {

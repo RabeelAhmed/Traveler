@@ -1,5 +1,7 @@
 const Collection = require('../Models/collection');
 const Post = require('../Models/post');
+const { collectionCacheKey } = require('../Utils/security');
+const invalidateCollections = owner => Promise.all(['owner', 'public'].map(scope => deleteCache(`v2:collections:${owner}:${scope}`)));
 const { success, error } = require('../Utils/responseWrapper');
 const { mapPostOutput } = require('../Utils/utils');
 const { remember, deleteCache, TTL } = require('../Utils/cache');
@@ -10,10 +12,11 @@ const createCollection = async (req, res) => {
     const { name, description, isPublic } = req.body;
     const curUserId = req.user.user_Id;
 
-    if (!name || !name.trim()) {
-      return res.send(error(400, 'Collection name is required'));
+    if (typeof name !== "string" || !name.trim()) {
+      return res.status(400).send(error(400, 'Collection name is required'));
     }
 
+    if ((description !== undefined && typeof description !== "string") || (isPublic !== undefined && typeof isPublic !== "boolean")) return res.status(400).json(error(400, "Invalid collection fields"));
     const collection = await Collection.create({
       owner: curUserId,
       name: name.trim(),
@@ -22,12 +25,12 @@ const createCollection = async (req, res) => {
     });
 
     // ── Cache Invalidation ──────────────────────────────────────────────────
-    await deleteCache(`collections:${curUserId}`);
+    await invalidateCollections(curUserId);
 
     return res.send(success(201, { collection }));
   } catch (err) {
     console.error('createCollection error:', err);
-    return res.send(error(500, 'Something went wrong'));
+    return res.status(500).send(error(500, 'Something went wrong'));
   }
 };
 
@@ -37,7 +40,7 @@ const getUserCollections = async (req, res) => {
     const { userId } = req.params;
     const curUserId = req.user.user_Id;
 
-    const cacheKey = `collections:${userId}`;
+    const cacheKey = collectionCacheKey(userId, curUserId);
     const collections = await remember(cacheKey, TTL.COLLECTIONS, async () => {
       // Own collections → all; other user → public only
       const filter =
@@ -64,7 +67,7 @@ const getUserCollections = async (req, res) => {
     return res.send(success(200, { collections }));
   } catch (err) {
     console.error('getUserCollections error:', err);
-    return res.send(error(500, 'Something went wrong'));
+    return res.status(500).send(error(500, 'Something went wrong'));
   }
 };
 
@@ -86,7 +89,7 @@ const getCollectionById = async (req, res) => {
     });
 
     if (!collection) {
-      return res.send(error(404, 'Collection not found'));
+      return res.status(404).send(error(404, 'Collection not found'));
     }
 
     // Non-owner trying to access private collection
@@ -94,7 +97,7 @@ const getCollectionById = async (req, res) => {
       !collection.isPublic &&
       collection.owner.toString() !== curUserId
     ) {
-      return res.send(error(403, 'This collection is private'));
+      return res.status(403).send(error(403, 'This collection is private'));
     }
 
     const mappedPosts = collection.posts.map((post) =>
@@ -117,7 +120,7 @@ const getCollectionById = async (req, res) => {
     );
   } catch (err) {
     console.error('getCollectionById error:', err);
-    return res.send(error(500, 'Something went wrong'));
+    return res.status(500).send(error(500, 'Something went wrong'));
   }
 };
 
@@ -130,13 +133,14 @@ const updateCollection = async (req, res) => {
 
     const collection = await Collection.findById(id);
     if (!collection) {
-      return res.send(error(404, 'Collection not found'));
+      return res.status(404).send(error(404, 'Collection not found'));
     }
 
     if (collection.owner.toString() !== curUserId) {
-      return res.send(error(403, 'Unauthorized: You do not own this collection'));
+      return res.status(403).send(error(403, 'Unauthorized: You do not own this collection'));
     }
 
+    if ((name !== undefined && typeof name !== "string") || (description !== undefined && typeof description !== "string") || (isPublic !== undefined && typeof isPublic !== "boolean")) return res.status(400).json(error(400, "Invalid collection fields"));
     if (name !== undefined) collection.name = name.trim();
     if (description !== undefined) collection.description = description.trim();
     if (isPublic !== undefined) collection.isPublic = isPublic;
@@ -144,12 +148,12 @@ const updateCollection = async (req, res) => {
     await collection.save();
 
     // ── Cache Invalidation ──────────────────────────────────────────────────
-    await deleteCache(`collections:${curUserId}`);
+    await invalidateCollections(curUserId);
 
     return res.send(success(200, { collection }));
   } catch (err) {
     console.error('updateCollection error:', err);
-    return res.send(error(500, 'Something went wrong'));
+    return res.status(500).send(error(500, 'Something went wrong'));
   }
 };
 
@@ -161,22 +165,22 @@ const deleteCollection = async (req, res) => {
 
     const collection = await Collection.findById(id);
     if (!collection) {
-      return res.send(error(404, 'Collection not found'));
+      return res.status(404).send(error(404, 'Collection not found'));
     }
 
     if (collection.owner.toString() !== curUserId) {
-      return res.send(error(403, 'Unauthorized: You do not own this collection'));
+      return res.status(403).send(error(403, 'Unauthorized: You do not own this collection'));
     }
 
     await Collection.findByIdAndDelete(id);
 
     // ── Cache Invalidation ──────────────────────────────────────────────────
-    await deleteCache(`collections:${curUserId}`);
+    await invalidateCollections(curUserId);
 
     return res.send(success(200, { message: 'Collection deleted successfully' }));
   } catch (err) {
     console.error('deleteCollection error:', err);
-    return res.send(error(500, 'Something went wrong'));
+    return res.status(500).send(error(500, 'Something went wrong'));
   }
 };
 
@@ -188,18 +192,19 @@ const togglePostInCollection = async (req, res) => {
     const curUserId = req.user.user_Id;
 
     if (!postId) {
-      return res.send(error(400, 'postId is required'));
+      return res.status(400).send(error(400, 'postId is required'));
     }
 
     const collection = await Collection.findById(id);
     if (!collection) {
-      return res.send(error(404, 'Collection not found'));
+      return res.status(404).send(error(404, 'Collection not found'));
     }
 
     if (collection.owner.toString() !== curUserId) {
-      return res.send(error(403, 'Unauthorized: You do not own this collection'));
+      return res.status(403).send(error(403, 'Unauthorized: You do not own this collection'));
     }
 
+    if (!await Post.exists({ _id: postId })) return res.status(404).json(error(404, "Post not found"));
     const alreadyIn = collection.posts.some(
       (p) => p.toString() === postId
     );
@@ -213,7 +218,7 @@ const togglePostInCollection = async (req, res) => {
     await collection.save();
 
     // ── Cache Invalidation ──────────────────────────────────────────────────
-    await deleteCache(`collections:${curUserId}`);
+    await invalidateCollections(curUserId);
 
     return res.send(
       success(200, {
@@ -223,7 +228,7 @@ const togglePostInCollection = async (req, res) => {
     );
   } catch (err) {
     console.error('togglePostInCollection error:', err);
-    return res.send(error(500, 'Something went wrong'));
+    return res.status(500).send(error(500, 'Something went wrong'));
   }
 };
 

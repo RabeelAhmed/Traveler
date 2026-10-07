@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+for (const param of ['id', '_id', 'userId', 'postId', 'conversationId']) router.param(param, require('../Middleware/validateId'));
 const { verifyAuthToken } = require('../Middleware/jwtAuthMiddleware');
 const {
   createOrUpdateReview,

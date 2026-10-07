@@ -1,135 +1,75 @@
 const Notification = require('./Models/notification');
+const Conversation = require('./Models/conversation');
+const { authenticateToken } = require('./Middleware/jwtAuthMiddleware');
+const { validCoordinates } = require('./Utils/security');
 let ioInstance;
-let onlineUsers = new Map();
-const liveUsers = new Map(); // userId → { lat, lng, username, profilePic, lastSeen }
-
-// Reverse lookup: find userId from socket.id
-const getUserIdBySocketId = (socketId) => {
-    for (const [uid, sid] of onlineUsers) { if (sid === socketId) return uid; }
-    return null;
+const liveUsers = new Map();
+const room = id => 'user:' + String(id);
+const initsocket = io => {
+  ioInstance = io;
+  io.use(async (socket, next) => {
+    try { socket.data.user = await authenticateToken(socket.handshake.auth?.token); next(); }
+    catch { next(new Error('Authentication required')); }
+  });
+  io.on('connection', socket => {
+    const userId = String(socket.data.user.user_Id);
+    socket.join(room(userId));
+    const expiry = setTimeout(() => socket.disconnect(true), Math.max(0, socket.data.user.exp * 1000 - Date.now()));
+    socket.on('disconnect', async () => {
+      clearTimeout(expiry);
+      const remaining = await io.in(room(userId)).fetchSockets();
+      if (!remaining.length && liveUsers.delete(userId)) io.emit('userWentOffline', { userId });
+    });
+    let lastLocation = 0;
+    socket.on('goLive', (payload = {}) => {
+      if (!payload || typeof payload !== 'object') return;
+      const { lat, lng } = payload;
+      if (!validCoordinates(lat, lng)) return;
+      const account = socket.data.user.account;
+      const data = { userId, lat, lng, username: account.username, profilePic: account.profilePicture, lastSeen: Date.now() };
+      liveUsers.set(userId, data);
+      io.emit('userWentLive', data);
+    });
+    socket.on('updateLocation', (payload = {}) => {
+      if (!payload || typeof payload !== 'object') return;
+      const { lat, lng } = payload;
+      if (!validCoordinates(lat, lng) || !liveUsers.has(userId) || Date.now() - lastLocation < 1000) return;
+      lastLocation = Date.now();
+      Object.assign(liveUsers.get(userId), { lat, lng, lastSeen: lastLocation });
+      io.emit('locationUpdated', { userId, lat, lng });
+    });
+    socket.on('goOffline', () => {
+      liveUsers.delete(userId);
+      io.emit('userWentOffline', { userId });
+    });
+    // Messages are emitted by the REST controller only after persistence.
+    let lastTyping = 0;
+    for (const event of ['typing', 'stopTyping']) socket.on(event, async (payload = {}) => {
+      if (!payload || typeof payload !== 'object') return;
+      const { conversationId } = payload;
+      if (event === 'typing' && Date.now() - lastTyping < 500) return;
+      if (event === 'typing') lastTyping = Date.now();
+      try {
+        const conversation = await Conversation.findOne({ _id: conversationId, participants: userId });
+        if (!conversation) return;
+        const recipient = conversation.participants.find(id => String(id) !== userId);
+        if (recipient) io.to(room(recipient)).emit(event, { conversationId, senderId: userId });
+      } catch { /* Ignore invalid socket payloads. */ }
+    });
+  });
 };
-
-const initsocket = (io) => {
-    ioInstance = io;
-    io.on('connection',(socket)=>{
-        console.log('connected',socket.id)
-        socket.on("join",(userId)=>{
-            onlineUsers.set(userId,socket.id);
-            console.log(`User ${userId} is online.`);
-        })
-        socket.on("disconnect",()=>{
-            let keyToRemove = null;
-            for(let [key,value] of onlineUsers ){
-                if(value === socket.id){
-                    keyToRemove = key;
-                    onlineUsers.delete(key);
-                    break;
-                }
-            }
-            if (keyToRemove) {
-                if (liveUsers.has(keyToRemove)) {
-                    liveUsers.delete(keyToRemove);
-                    ioInstance.emit('userWentOffline', { userId: keyToRemove });
-                }
-            }
-            console.log('User disconnected:', socket.id);
-        })
-
-        socket.on('goLive', ({ lat, lng, userInfo }) => {
-            const userId = getUserIdBySocketId(socket.id);
-            if (!userId) return;
-            liveUsers.set(userId, { lat, lng, username: userInfo.username,
-                profilePic: userInfo.profilePic, lastSeen: Date.now() });
-            io.emit('userWentLive', { userId, lat, lng,
-                username: userInfo.username, profilePic: userInfo.profilePic });
-        });
-
-        socket.on('updateLocation', ({ lat, lng }) => {
-            const userId = getUserIdBySocketId(socket.id);
-            if (!userId || !liveUsers.has(userId)) return;
-            const existing = liveUsers.get(userId);
-            existing.lat = lat; existing.lng = lng; existing.lastSeen = Date.now();
-            io.emit('locationUpdated', { userId, lat, lng });
-        });
-
-        socket.on('goOffline', () => {
-            const userId = getUserIdBySocketId(socket.id);
-            if (!userId) return;
-            liveUsers.delete(userId);
-            io.emit('userWentOffline', { userId });
-        });
-
-        // Direct Messaging Events
-        socket.on('sendMessage', ({ recipientId, message }) => {
-            if (!recipientId) return;
-            const recipientSocketId = onlineUsers.get(recipientId.toString());
-            if (recipientSocketId) {
-                ioInstance.to(recipientSocketId).emit('newMessage', message);
-            }
-        });
-
-        socket.on('typing', ({ conversationId, recipientId }) => {
-            if (!recipientId) return;
-            const recipientSocketId = onlineUsers.get(recipientId.toString());
-            const senderId = getUserIdBySocketId(socket.id);
-            if (recipientSocketId) {
-                ioInstance.to(recipientSocketId).emit('typing', { conversationId, senderId });
-            }
-        });
-
-        socket.on('stopTyping', ({ conversationId, recipientId }) => {
-            if (!recipientId) return;
-            const recipientSocketId = onlineUsers.get(recipientId.toString());
-            if (recipientSocketId) {
-                ioInstance.to(recipientSocketId).emit('stopTyping', { conversationId });
-            }
-        });
-    })
-}
-
-const notify = async(notification) => {
-    if(!ioInstance){
-        return;
-    }
-    try {
-        // Fetch the notification with populated data
-        const populatedNotification = await Notification.findById(notification._id)
-            .populate("sender", "username profilePicture") // Populate recipient with selected fields
-            .exec();
-        if (!populatedNotification) {
-            console.error("Notification not found");
-            return;
-        }
-        console.log(populatedNotification.recipient.toString());
-        const recipientSocketId = onlineUsers.get(populatedNotification.recipient.toString());
-        console.log(onlineUsers);
-        if (recipientSocketId) {
-            ioInstance.to(recipientSocketId).emit("newNotification", populatedNotification);
-            console.log(populatedNotification.type)
-        }
-    } catch (error) {
-        console.error("Error populating notification:", error);
-    }
+const notify = async notification => {
+  if (!ioInstance) return;
+  try {
+    const populated = await Notification.findById(notification._id).populate('sender', 'username profilePicture');
+    if (populated) ioInstance.to(room(populated.recipient)).emit('newNotification', populated);
+  } catch (err) { console.error('Notification delivery failed:', err.message); }
 };
-
-/**
- * Broadcast a newly created post to all online followers of the post owner.
- * @param {string[]} followerIds  - array of follower userId strings
- * @param {object}   mappedPost   - already mapPostOutput()-ed post object
- */
-const broadcastNewPost = (followerIds, mappedPost) => {
-    if (!ioInstance) return;
-    for (const followerId of followerIds) {
-        const socketId = onlineUsers.get(followerId.toString());
-        if (socketId) {
-            ioInstance.to(socketId).emit("newPost", mappedPost);
-        }
-    }
+const broadcastNewPost = (followers, post) => {
+  if (!ioInstance) return;
+  for (const id of followers) ioInstance.to(room(id)).emit('newPost', { ...post, isLikedByUser: false });
 };
-
-const emitMessagesRead = (senderUserId, conversationId) => {
-    const senderSocketId = onlineUsers.get(senderUserId.toString());
-    if (senderSocketId) ioInstance.to(senderSocketId).emit('messagesRead', { conversationId });
-}
-
-module.exports = { initsocket, notify, broadcastNewPost, emitMessagesRead, liveUsers };
+const emitMessagesRead = (sender, conversationId) => ioInstance?.to(room(sender)).emit('messagesRead', { conversationId });
+const emitMessage = (recipient, message) => ioInstance?.to(room(recipient)).emit('newMessage', message);
+const disconnectUser = id => ioInstance?.in(room(id)).disconnectSockets(true);
+module.exports = { initsocket, notify, broadcastNewPost, emitMessagesRead, emitMessage, disconnectUser, liveUsers };

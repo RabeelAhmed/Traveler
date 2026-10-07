@@ -14,7 +14,7 @@ if (dns.setDefaultResultOrder) {
 const URI = process.env.URI || process.env.MONGO_URI;
 
 const connectionOptions = {
-  autoIndex: true
+  autoIndex: process.env.NODE_ENV !== 'production'
 };
 
 async function connectDB() {

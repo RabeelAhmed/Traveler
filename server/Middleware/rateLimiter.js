@@ -3,7 +3,7 @@
  *
  * Redis-backed rate limiter using Upstash Redis.
  * Returns HTTP 429 when the limit is exceeded.
- * Gracefully passes requests through if Redis is unavailable.
+ * Uses a bounded local limiter when Redis is not configured. Redis errors return 503.
  *
  * Usage:
  *   const { createRateLimiter } = require('../Middleware/rateLimiter');
@@ -13,6 +13,7 @@
  *   router.post('/login', loginLimiter, login);
  */
 
+const localWindows = new Map();
 const redis = require('../Utils/redis');
 
 /**
@@ -24,32 +25,39 @@ const redis = require('../Utils/redis');
  */
 const createRateLimiter = (prefix, limit, windowSecs) => {
   return async (req, res, next) => {
-    // If Redis is not configured, skip rate limiting gracefully
-    if (!redis) return next();
+    // Local fallback is used only when Redis has not been configured.
+
 
     // Use IP address as the identifier (works behind Vercel edge proxies)
-    const ip =
-      req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
-      req.socket?.remoteAddress ||
-      'unknown';
+    const ip = req.ip || req.socket?.remoteAddress || 'unknown';
 
     const key = `${prefix}:${ip}`;
 
     try {
       // Increment the counter
-      const current = await redis.incr(key);
+      let current;
+      let remainingSecs = windowSecs;
+      if (redis) {
+        const result = await redis.eval("local n = redis.call('INCR', KEYS[1]); if n == 1 then redis.call('EXPIRE', KEYS[1], ARGV[1]) end; return {n, redis.call('TTL', KEYS[1])}", [key], [windowSecs]);
+        current = Number(result[0]); remainingSecs = Number(result[1]);
+      } else {
+        const now = Date.now();
+        for (const [id, value] of localWindows) if (value.expires <= now) localWindows.delete(id);
+        if (localWindows.size >= 10000 && !localWindows.has(key)) return res.status(503).json({ message: 'Please try again later' });
+        const bucket = localWindows.get(key) || { count: 0, expires: now + windowSecs * 1000 };
+        current = ++bucket.count; remainingSecs = Math.ceil((bucket.expires - now) / 1000);
+        localWindows.set(key, bucket);
+      }
 
       // On first request, set the expiry
-      if (current === 1) {
-        await redis.expire(key, windowSecs);
-      }
+
 
       // Add rate limit headers
       res.set('X-RateLimit-Limit', limit);
       res.set('X-RateLimit-Remaining', Math.max(0, limit - current));
 
       if (current > limit) {
-        const ttl = await redis.ttl(key);
+        const ttl = remainingSecs;
         res.set('Retry-After', ttl > 0 ? ttl : windowSecs);
         return res.status(429).json({
           success: false,
@@ -60,9 +68,9 @@ const createRateLimiter = (prefix, limit, windowSecs) => {
 
       next();
     } catch (err) {
-      // Redis error — fail open (allow the request) and log a warning
-      console.warn(`[RateLimit] Redis error for key "${key}": ${err.message}. Allowing request.`);
-      next();
+      // Redis errors fail closed so authentication limits cannot be bypassed.
+      console.warn(`[RateLimit] Redis error for key "${key}": ${err.message}. Blocking request.`);
+      return res.status(503).json({ message: 'Rate limiting temporarily unavailable. Please try again later.' });
     }
   };
 };

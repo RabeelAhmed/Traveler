@@ -1,3 +1,4 @@
+const { signMedia, verifyMedia } = require("../Utils/mediaReceipt");
 const story = require("../Models/story");
 const user = require("../Models/User");
 const mongoose = require("mongoose");
@@ -14,12 +15,12 @@ dotenv.config();
 
 const addStory = async (req, res) => {
   try {
-    const { title, lat, long, url, publicId } = req.body;
+    const { title, lat, long, url, publicId, resourceType, receipt } = req.body;
 
     // Validate required fields
     const requiredFields = { title, lat, long, url, publicId };
     for (const [field, value] of Object.entries(requiredFields)) {
-      if (!value) {
+      if (value === undefined || value === null || value === "") {
         return res.status(400).json({
           success: false,
           message: `${field} is required`,
@@ -35,6 +36,7 @@ const addStory = async (req, res) => {
       });
     }
 
+    if (!verifyMedia({ url, publicId, resourceType, receipt }, req.user.user_Id, "story")) return res.status(400).json(error(400, "Media must come from your own uploads"));
     // Check authentication
     if (!req.user?.user_Id) {
       return res.status(401).json({
@@ -62,7 +64,8 @@ const addStory = async (req, res) => {
       userId: req.user.user_Id,
       video: {
         url,
-        publicId
+        publicId,
+        resourceType
       }
     });
 
@@ -105,10 +108,11 @@ const addStory = async (req, res) => {
     await author.save();
 
     // ── Cache Invalidation ──────────────────────────────────────────────────
-    await deleteCache('stories');
+    await require("../Utils/cache").deleteByPattern("v2:stories:*");
 
     // Prepare response
-    const mappedStory = mapStoryOutput(newStory, author);
+    await newStory.populate("userId", "profilePicture");
+    const mappedStory = mapStoryOutput(newStory, req.user.user_Id);
     
     return res.status(201).json({
       success: true,
@@ -131,7 +135,7 @@ const addStory = async (req, res) => {
 const uploadStoryMediaController = async (req, res) => {
   try {
     if (!req.file) {
-      return res.send(error(400, "No file provided for story media."));
+      return res.status(400).send(error(400, "No file provided for story media."));
     }
 
     // Backend validation: 1 file, image (<=10MB) or video (<=100MB)
@@ -142,11 +146,8 @@ const uploadStoryMediaController = async (req, res) => {
     if (cloudName === "dummy" || !cloudName) {
       const mimeType = req.file.mimetype || (resourceType === 'image' ? 'image/jpeg' : 'video/mp4');
       const base64Data = `data:${mimeType};base64,${req.file.buffer.toString("base64")}`;
-      return res.send(success(200, {
-        url: base64Data,
-        publicId: "dummy_story_" + Date.now(),
-        resourceType
-      }));
+      const result = { url: base64Data, publicId: "dummy_story_" + Date.now(), resourceType };
+      return res.send(success(200, { ...result, receipt: signMedia(result, req.user.user_Id, "story") }));
     }
 
     // Upload to traveler/stories folder
@@ -154,11 +155,12 @@ const uploadStoryMediaController = async (req, res) => {
     return res.send(success(200, {
       url: result.url,
       publicId: result.publicId,
-      resourceType: result.resourceType
+      resourceType: result.resourceType,
+      receipt: signMedia(result, req.user.user_Id, "story")
     }));
   } catch (err) {
     console.error("uploadStoryMediaController error:", err);
-    return res.send(error(400, err.message));
+    return res.status(400).send(error(400, err.message));
   }
 };
 
@@ -201,8 +203,8 @@ const generateSignature = (req, res) => {
 const getStory = async(req,res) => {
   try {
     const curUserId = req.user?.user_Id;
-    const stories = await remember('stories', TTL.STORIES, async () => {
-      const allStory = await story.find().populate('userId', 'profilePicture');
+    const stories = await remember(`v2:stories:${curUserId}`, TTL.STORIES, async () => {
+      const allStory = await story.find({ createdAt: { $gt: new Date(Date.now() - 86400000) } }).populate('userId', 'profilePicture');
       return allStory.map((s) => mapStoryOutput(s, curUserId));
     });
     return res.json(success(201, { stories }));
@@ -262,7 +264,7 @@ const likeAndUnlikeStory = async (req, res) => {
     }
 
     // ── Cache Invalidation ──────────────────────────────────────────────────
-    await deleteCache('stories');
+    await require("../Utils/cache").deleteByPattern("v2:stories:*");
 
     return res.status(200).json({
       success: true,

@@ -1,3 +1,4 @@
+const { signMedia, verifyMedia } = require("../Utils/mediaReceipt");
 const user = require("../Models/User");
 const { success, error } = require("../Utils/responseWrapper");
 const { signjwt } = require("../Middleware/jwtAuthMiddleware");
@@ -5,7 +6,7 @@ const mongoose = require("mongoose");
 const { mapPostOutput } = require("../Utils/utils");
 const { cloudinary, uploadToCloudinary, validateFile } = require("../Utils/cloudinaryConfig");
 const crypto = require("crypto");
-const jwt = require("jsonwebtoken");
+const { hashResetToken, validPassword } = require("../Utils/security");
 const { Resend } = require("resend");
 const resend = new Resend(process.env.RESEND_API_KEY);
 const getResetPasswordEmail = require("../Utils/emailTemplates/resetPassword");
@@ -23,27 +24,31 @@ const signup = async (req, res) => {
       kofi,
       profilePictureUrl,
       profilePicturePublicId,
+      profilePictureReceipt,
     } = req.body;
-    console.log(req.body);
-    // ✅ Basic field validation
+    if (![username, fullname, email, password, dateOfBirth, bio].every(value => typeof value === "string")) return res.status(400).json(error(400, "Invalid account fields"));
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || username.length > 40 || fullname.length > 100 || bio.length > 300 || !Number.isFinite(Date.parse(dateOfBirth)) || Date.parse(dateOfBirth) > Date.now()) return res.status(400).json(error(400, "Invalid account information"));
+    // Basic field validation
     if (!username || !email || !password || !dateOfBirth || !fullname || !bio) {
-      return res.send(error(400, "Please fill all the required fields"));
+      return res.status(400).send(error(400, "Please fill all the required fields"));
     }
 
-    // ✅ Check for existing email or username
+    if (!validPassword(password)) return res.status(400).json(error(400, "Password must contain at least 8 characters and at most 72 bytes"));
+    // Check for existing email or username
     const userMailExist = await user.findOne({ email });
     if (userMailExist) {
-      return res.send(error(400, "Email already exists"));
+      return res.status(400).send(error(400, "Email already exists"));
     }
 
     const userNameExist = await user.findOne({ username });
     if (userNameExist) {
-      return res.send(error(400, "Username already exists"));
+      return res.status(400).send(error(400, "Username already exists"));
     }
 
-    // ✅ Prepare profile picture object
+    if (profilePicturePublicId && !verifyMedia({ url: profilePictureUrl, publicId: profilePicturePublicId, resourceType: "image", receipt: profilePictureReceipt }, "signup", "profile")) return res.status(400).json(error(400, "Invalid profile upload"));
+    // Prepare profile picture object
     const profilePicture = {
-      public_id: profilePicturePublicId || null,
+      publicId: profilePicturePublicId || null,
       url:
         profilePictureUrl ||
         "https://res.cloudinary.com/djiqzvcev/image/upload/v1729021294/blank-profile-picture-973460_1280_kwgltq.png",
@@ -68,7 +73,7 @@ const signup = async (req, res) => {
     return res.send(success(200, token));
   } catch (err) {
     console.error("Signup Error:", err);
-    return res.send(error(500, err.message));
+    return res.status(500).send(error(500, err.message));
   }
 };
 
@@ -82,18 +87,12 @@ const generateProfilePicSignature = (req, res) => {
     },
     process.env.CLOUDINARY_API_SECRET
   );
-  console.log(
-    signature,
-    timestamp,
-    process.env.CLOUD_NAME,
-    "ApiKey",
-    process.env.API_KEY
-  );
+
   return res.status(201).json({
     signature,
     timestamp,
-    cloudName: process.env.CLOUD_NAME,
-    apiKey: process.env.API_KEY,
+    cloudName: process.env.CLOUDINARY_CLOUD_NAME || process.env.CLOUD_NAME,
+    apiKey: process.env.CLOUDINARY_API_KEY || process.env.API_KEY,
   });
 };
 
@@ -114,10 +113,8 @@ const uploadProfilePicController = async (req, res) => {
     if (cloudName === "dummy" || !cloudName) {
       const mimeType = req.file.mimetype || "image/jpeg";
       const base64Data = `data:${mimeType};base64,${req.file.buffer.toString("base64")}`;
-      return res.status(200).json({
-        secure_url: base64Data,
-        public_id: "dummy_profile_pic_" + Date.now(),
-      });
+      const result = { url: base64Data, publicId: "dummy_profile_pic_" + Date.now(), resourceType: "image" };
+      return res.status(200).json({ secure_url: result.url, public_id: result.publicId, receipt: signMedia(result, "signup", "profile") });
     }
 
     // Upload to Cloudinary
@@ -125,6 +122,7 @@ const uploadProfilePicController = async (req, res) => {
     return res.status(200).json({
       secure_url: result.url,
       public_id: result.publicId,
+      receipt: signMedia(result, "signup", "profile"),
     });
   } catch (err) {
     console.error("uploadProfilePicController error:", err);
@@ -135,30 +133,29 @@ const uploadProfilePicController = async (req, res) => {
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
-    console.log(req.body);
+    if (typeof email !== "string" || typeof password !== "string") return res.status(400).json(error(400, "Email and password are required"));
     if (!email || !password) {
-      return res.send(error(400, "Please fill all the fields"));
+      return res.status(400).send(error(400, "Please fill all the fields"));
     }
-    const userExisted = await user.findOne({ email }).select("+password");
-    console.log(userExisted);
+    const userExisted = await user.findOne({ email }).select("+password +tokenVersion");
     if (!userExisted) {
-      return res.send(error(403, "User does'nt Existed"));
+      return res.status(403).send(error(403, "User does'nt Existed"));
     }
     const isMatch = await userExisted.comparePassword(password);
     if (!isMatch) {
-      return res.send(error(403, "Incorrect Password"));
+      return res.status(403).send(error(403, "Incorrect Password"));
     }
-    const token = signjwt(userExisted._id);
+    const token = signjwt(userExisted._id, userExisted.tokenVersion);
     return res.send(success(200, { token }));
   } catch (err) {
-    return res.send(error(400, err.message));
+    return res.status(400).send(error(400, err.message));
   }
 };
 
 const getProfile = async (req, res) => {
   try {
     const user_Id = req.user.user_Id;
-    const cacheKey = `profile:${user_Id}`;
+    const cacheKey = `v2:own-profile:${user_Id}`;
 
     const cached = await remember(cacheKey, TTL.PROFILE, async () => {
       const userProfile = await user.findById(user_Id);
@@ -201,6 +198,8 @@ const updateProfile = async (req, res) => {
   try {
     const userId = req.user.user_Id; // Extract user ID from request
     const { fullname, bio, email, dateOfBirth } = req.body;
+    if ([fullname, bio, email, dateOfBirth].some(value => value !== undefined && typeof value !== "string")) return res.status(400).json(error(400, "Invalid profile fields"));
+    if (email !== undefined && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json(error(400, "Invalid email"));
     let updateFields = { fullname, bio, email, dateOfBirth };
 
     // Handle profile picture update
@@ -208,7 +207,7 @@ const updateProfile = async (req, res) => {
       // Backend validation
       const fileType = validateFile(req.file);
       if (fileType !== "image") {
-        return res.send(error(400, "Videos are not allowed for profile pictures."));
+        return res.status(400).send(error(400, "Videos are not allowed for profile pictures."));
       }
 
       // Find the user to get current profile picture
@@ -248,33 +247,34 @@ const updateProfile = async (req, res) => {
 
     // Update user profile
     const updatedUser = await user.findByIdAndUpdate(userId, updateFields, {
-      new: true,
+      new: true, runValidators: true,
     });
 
     if (!updatedUser) {
-      return res.send(error(404, "User not found"));
+      return res.status(404).send(error(404, "User not found"));
     }
 
     // ── Cache Invalidation ──────────────────────────────────────────────────
-    await deleteCache(`profile:${userId}`);
+    await Promise.all([deleteCache(`v2:own-profile:${userId}`), require("../Utils/cache").deleteByPattern(`v2:profile:${userId}:*`)]);
 
     return res.send(
       success(200, { message: "Profile updated successfully", updatedUser })
     );
   } catch (err) {
     console.error(err);
-    return res.send(error(500, err.message));
+    return res.status(500).send(error(500, err.message));
   }
 };
 
 const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
+    if (typeof email !== "string") return res.status(400).json(error(400, "Email is required"));
 
     // Check if user exists
     const userProfile = await user.findOne({ email });
     if (!userProfile) {
-      return res.status(404).json({ error: "User not found" });
+      return res.status(200).json({ message: "If an account exists, a reset link will be sent." });
     }
 
     // Generate reset token (expires in 1 hour)
@@ -282,21 +282,22 @@ const forgotPassword = async (req, res) => {
     const resetTokenExpiry = Date.now() + 3600000; // 1 hour
 
     // Save token to user
-    userProfile.resetPasswordToken = resetToken;
+    userProfile.resetPasswordToken = hashResetToken(resetToken);
     userProfile.resetPasswordExpires = resetTokenExpiry;
     await userProfile.save();
 
     // Send email via Resend
     const resetUrl = `${process.env.ORIGIN}/reset-password?token=${resetToken}`;
 
-    await resend.emails.send({
+    const delivery = await resend.emails.send({
       from: "no-reply@resend.dev",
       to: email,
       subject: "Password Reset Request",
       html: getResetPasswordEmail(resetUrl, userProfile.fullname),
     });
+    if (delivery.error) throw new Error("Reset email delivery failed");
 
-    res.status(200).json({ message: "Reset link sent to email!" });
+    res.status(200).json({ message: "If an account exists, a reset link will be sent." });
   } catch (err) {
     console.error("Forgot Password Error:", err);
     res.status(500).json({ error: "Failed to send reset email" });
@@ -307,20 +308,21 @@ const forgotPassword = async (req, res) => {
 const resetPassword = async (req, res) => {
   try {
     const { token, newPassword } = req.body;
+    if (typeof token !== "string" || !/^[a-f0-9]{40}$/.test(token) || !validPassword(newPassword)) return res.status(400).json(error(400, "Invalid token or password (8 characters minimum, 72 bytes maximum)"));
 
     // Find user by token & check expiry
-    const userProfile = await user.findOne({
-      resetPasswordToken: token,
-      resetPasswordExpires: { $gt: Date.now() },
-    });
+    const passwordHash = await require('bcrypt').hash(newPassword, 10);
+    const userProfile = await user.findOneAndUpdate({
+      resetPasswordToken: hashResetToken(token), resetPasswordExpires: { $gt: Date.now() },
+    }, {
+      $set: { password: passwordHash }, $unset: { resetPasswordToken: 1, resetPasswordExpires: 1 }, $inc: { tokenVersion: 1 },
+    }, { new: true });
 
     if (!userProfile) {
       return res.status(400).json({ error: "Invalid or expired token" });
     }
-    userProfile.password = newPassword;
-    userProfile.resetPasswordToken = undefined;
-    userProfile.resetPasswordExpires = undefined;
-    await userProfile.save();
+    require("../socket").disconnectUser(userProfile._id);
+    await deleteCache(`v2:own-profile:${userProfile._id}`);
 
     res.status(200).json({ message: "Password reset successful!" });
   } catch (err) {

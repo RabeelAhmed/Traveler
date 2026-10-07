@@ -12,6 +12,8 @@
 
 **Traveler** is a MERN stack social network designed for explorers. Share travel posts, upload geo-tagged stories on an interactive map, log multi-step journey trees, and receive AI-powered destination recommendations — all in one platform.
 
+Recent security, reliability, and performance updates, required deployment steps, and remaining work are documented in [docs/UPDATES.md](docs/UPDATES.md). The configured Node advisor performs dataset filtering and geographic proximity lookup; it does not learn user preferences.
+
 ![Landing Page](client/docs/screenshots/landing.png)
 
 </div>

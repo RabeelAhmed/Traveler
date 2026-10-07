@@ -25,7 +25,7 @@ export const likeAndUnlikePost = createAsyncThunk(
       toast.success(response.data.result.message); 
       return response.data.result;
     } catch (error) {
-      toast.error(response.data.result.message); 
+      toast.error(error.message || "Could not update post");
       return Promise.reject(error);
     }
   }

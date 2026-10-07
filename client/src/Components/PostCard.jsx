@@ -16,9 +16,6 @@ import { toggleBookmark } from "../Toolkit/slices/bookmarkSlice";
 import { springPress } from "../utils/motion";
 
 const PostCard = ({ post }) => {
-  if (post?.journeyId && post?.stepIndex === 0) {
-    return <JourneyCard post={post} />;
-  }
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -87,6 +84,8 @@ const PostCard = ({ post }) => {
   };
 
   const heroImageUrl = post?.media?.[0]?.url;
+
+  if (post?.journeyId && post?.stepIndex === 0) return <JourneyCard post={post} />;
 
   return (
     <div

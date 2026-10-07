@@ -1,3 +1,4 @@
+const { PUBLIC_USER_FIELDS, profileCacheKey } = require("../Utils/security");
 const Post = require("../Models/post");
 const user = require("../Models/User");
 const mongoose = require("mongoose");
@@ -8,119 +9,33 @@ const Notification = require("../Models/notification");
 const { notify } = require("../socket");
 const { remember, deleteCache, TTL } = require("../Utils/cache");
 
+const invalidateSocialViews = () => Promise.all(['feed:*', 'v2:post:*', 'v2:profile:*', 'v2:own-profile:*', 'v2:search:*', 'trending:*'].map(pattern => require('../Utils/cache').deleteByPattern(pattern)));
 const followAndUnfollow = async (req, res) => {
   try {
     const curUserId = req.user.user_Id;
     const { followId } = req.body;
-    console.log(req.body);
-    // Check for self-follow attempt
-    if (curUserId === followId) {
-      return res.status(400).send(error(400, "You can't follow yourself"));
-    }
-
-    // Fetch current user and the user to be followed/unfollowed
-    const curUser = await user.findById(curUserId);
-    const followUser = await user.findById(followId);
-
-    if (!curUser) {
-      return res.status(400).send(error(400, "Current user doesn't exist"));
-    }
-
-    if (!followUser) {
-      return res
-        .status(400)
-        .send(error(400, "User to follow/unfollow doesn't exist"));
-    }
-
-    let isFollowing = curUser.following.includes(followId);
-
-    // Follow or unfollow logic
-    if (isFollowing) {
-      // Unfollow
-      curUser.following = curUser.following.filter(
-        (id) => id.toString() !== followId.toString()
-      );
-      followUser.followers = followUser.followers.filter(
-        (id) => id.toString() !== curUserId.toString()
-      );
-      console.log(
-        "After unfollowing:",
-        curUser.following,
-        followUser.followers
-      );
-    } else {
-      // Follow
-      curUser.following.push(followId);
-      followUser.followers.push(curUserId);
-      
-    }
-
-    let achivement;
-    if (followUser.followers.length === 0 ) {
-      achivement = "adventurer";
-      const hasBadge = followUser.badges.some(obj => obj.name === achivement);
-    
-      if (!hasBadge) {
-        followUser.badges.push({
-          name: achivement,
-          awardedAt: new Date(),
-        });
-    
-        await followUser.save();
-        const notification = new Notification({
-                    recipient: req.user.user_Id, // Post owner
-                    sender: req.user.user_Id,
-                    type: 'Achivement',
-                    post: req.user.user_Id,
-                  });
-                  await notification.save();
-                  notify(notification);
-      }
-    }
-
-    // Save changes
-    await curUser.save();
-    await followUser.save();
-    if(!isFollowing){
-      const notification = new Notification({
-        recipient: followId, // Post owner
-        sender: curUserId,
-        type: 'follow',
-    })
-    await notification.save();
-    notify(notification)
-    }
-
-    // ── Cache Invalidation ──────────────────────────────────────────────────
-    // Follow/unfollow changes the feed composition and profile follower counts
-    await Promise.all([
-      deleteCache(`feed:${curUserId}`),
-      deleteCache(`profile:${curUserId}`),
-      deleteCache(`profile:${followId}`),
-    ]);
-
-    return res.status(200).send(
-      success(200, {
-        message: isFollowing
-          ? "User unfollowed successfully"
-          : "User followed successfully",
-        user: {
-          username: followUser.username,
-          followersCount: followUser.followers,
-          followingCount: followUser.following,
-          isFollowing: !isFollowing,
-        },
-        currentUser: {
-          username: curUser.username,
-          followersCount: curUser.followers,
-          followingCount: curUser.following,
-        },
-      })
-    );
-  } catch (err) {
-    console.error("Error in followAndUnfollow:", err);
-    return res.status(500).send(error(500, "Something went wrong"));
-  }
+    if (!mongoose.isValidObjectId(followId) || followId === curUserId) return res.status(400).json(error(400, 'Invalid follow target'));
+    let isFollowing, curUser, followUser, followNotification;
+    await mongoose.connection.transaction(async session => {
+      curUser = await user.findById(curUserId).session(session);
+      followUser = await user.findById(followId).session(session);
+      if (!curUser || !followUser) throw new Error('User not found');
+      isFollowing = curUser.following.some(id => String(id) === followId);
+      const operation = isFollowing ? '$pull' : '$addToSet';
+      await user.updateOne({ _id: curUserId }, { [operation]: { following: followId } }, { session });
+      await user.updateOne({ _id: followId }, { [operation]: { followers: curUserId } }, { session });
+      if (!isFollowing) [followNotification] = await Notification.create([{ recipient: followId, sender: curUserId, type: 'follow' }], { session });
+    });
+    if (followNotification) notify(followNotification);
+    await invalidateSocialViews();
+    curUser = await user.findById(curUserId);
+    followUser = await user.findById(followId);
+    return res.json(success(200, {
+      message: isFollowing ? 'User unfollowed successfully' : 'User followed successfully',
+      user: { username: followUser.username, followersCount: followUser.followers, followingCount: followUser.following, isFollowing: !isFollowing },
+      currentUser: { username: curUser.username, followersCount: curUser.followers, followingCount: curUser.following },
+    }));
+  } catch (err) { console.error('Follow update failed:', err.message); return res.status(500).json(error(500, 'Could not update following')); }
 };
 
 const getFeedData = async (req, res) => {
@@ -138,7 +53,7 @@ const getFeedData = async (req, res) => {
       const followingPosts = await Post.find({
         userId: { $in: followingIds },
       })
-        .populate({ path: "userId" })
+        .populate({ path: "userId", select: PUBLIC_USER_FIELDS })
         .populate("journeyId")
         .populate({
           path: "comments",
@@ -169,7 +84,7 @@ const getFeedData = async (req, res) => {
 
     return res.send(success(200, posts));
   } catch (err) {
-    return res.send(error(500, err.message));
+    return res.status(500).send(error(500, err.message));
   }
 };
 
@@ -182,17 +97,17 @@ const getUserProfile = async (req, res) => {
     }
 
     const curUserId = req.user.user_Id;
-    const cacheKey = `profile:${_id}`;
+    const cacheKey = profileCacheKey(_id, curUserId);
 
     // We only cache the userProfile + posts; isFollowing is per-viewer so we compute it fresh
     const cached = await remember(cacheKey, TTL.PROFILE, async () => {
-      const userProfile = await user.findById(_id);
+      const userProfile = await user.findById(_id).select(PUBLIC_USER_FIELDS + " posts");
       if (!userProfile) return null;
 
       const allPosts = await userProfile.populate({
         path: "posts",
         populate: [
-          { path: "userId" },
+          { path: "userId", select: PUBLIC_USER_FIELDS },
           { path: "journeyId" },
           {
             path: "comments",
@@ -238,7 +153,7 @@ const getNotifications = async (req,res) => {
   // Notifications are real-time and never cached
   try {
     const curUserId = req.user.user_Id;
-    const notificationList = await Notification.find({ recipient: curUserId.toString() }).populate({
+    const notificationList = await Notification.find({ recipient: curUserId.toString() }).sort({ createdAt: -1 }).limit(100).populate({
       path: 'sender',
       select: 'profilePicture username',
     });

@@ -26,7 +26,7 @@ const mapPostOutput = (post, curUserId) => {
     stepIndex: post?.stepIndex,
     likes:post?.likes,
     likesCount: post?.likes.length,
-    isLikedByUser: curUserId ? post?.likes.includes(curUserId) : false,
+    isLikedByUser: curUserId ? post?.likes?.some(id => String(id) === String(curUserId)) : false,
     comments: post?.comments?.map(comment => ({
       userId: comment?.userId?._id,
       userProfileImage:comment?.userId?.profilePicture?.url,
@@ -45,9 +45,9 @@ const mapPostOutput = (post, curUserId) => {
   videoUrl: story.video.url,
   location: story.location,
   likesCount: story.likes.length,
-  isLiked: story.likes.includes(curUserId), // Check if user liked it
+  isLiked: story.likes.some(id => String(id) === String(curUserId)), // Check if user liked it
   user: {
-    _id: story.userId,
+    _id: story.userId?._id || story.userId,
     profilePicture: story.userId.profilePicture,
   },
   createdAt:  timeAgo.ago(story.createdAt),

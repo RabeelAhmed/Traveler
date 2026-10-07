@@ -62,8 +62,8 @@ const validateFile = (file) => {
   const allowedVideoExts = ['.mp4', '.mov', '.webm'];
   const allowedVideoMimeTypes = ['video/mp4', 'video/quicktime', 'video/webm'];
 
-  const isImage = allowedImageExts.includes(ext) || allowedImageMimeTypes.includes(mime);
-  const isVideo = allowedVideoExts.includes(ext) || allowedVideoMimeTypes.includes(mime);
+  const isImage = allowedImageExts.includes(ext) && allowedImageMimeTypes.includes(mime);
+  const isVideo = allowedVideoExts.includes(ext) && allowedVideoMimeTypes.includes(mime);
 
   if (!isImage && !isVideo) {
     throw new Error(`Unsupported file type: ${file.originalname}. Supported formats: Images (jpg, jpeg, png, webp), Videos (mp4, mov, webm)`);

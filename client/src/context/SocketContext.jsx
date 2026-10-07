@@ -17,8 +17,9 @@
  * No code changes required.
  */
 
-import React, { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { useSelector } from "react-redux";
+import { getItem, KEY_ACCESS_TOKEN } from "../utils/LocalStorageManager";
 import { io } from "socket.io-client";
 
 // Read the feature flag at module load time (Vite replaces import.meta.env at build time).
@@ -55,8 +56,8 @@ export const SocketProvider = ({ children }) => {
       return;
     }
 
-    const newsocket = io(REACT_APP_SERVER_BASE_URL, { autoConnect: true });
-    newsocket.emit("join", userId);
+    const newsocket = io(REACT_APP_SERVER_BASE_URL, { autoConnect: true, auth: { token: getItem(KEY_ACCESS_TOKEN) } });
+
     setSocket(newsocket);
 
     return () => {

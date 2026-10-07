@@ -1,3 +1,13 @@
+# Travel Advisor
+
+The configured deployment runs `server.js` using Node.js and Express. It reads `Tourist Destinations.csv`, filters destinations by district/category, and uses Haversine distance for the nearest-location endpoint. It does not learn user preferences.
+
+Run `npm install` and `npm start` in this directory. The service listens on port 5001 by default.
+
+The Python files are legacy experimental alternatives and are not selected by `vercel.json`. Their original documentation follows for reference.
+
+---
+
 ## Travel-Advisor Repository (ML)
 
 # Travel-Advisor – AI/ML Engine for Traveler Platform

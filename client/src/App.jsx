@@ -18,6 +18,7 @@ import { setLoggedIn} from './Toolkit/slices/appConfigSlice';
 import { prependPost } from './Toolkit/slices/feedSlice';
 import { refreshTags } from './Toolkit/slices/trendingTagsSlice';
 import { useSocket } from "./context/SocketContext";
+import { addLiveUser, updateLiveUser, removeLiveUser } from "./Toolkit/slices/liveSlice";
 import { receiveMessage, markConversationRead } from "./Toolkit/slices/messageSlice";
 import SocketUnavailableModal from "./Components/SocketUnavailableModal";
 
@@ -135,21 +136,15 @@ function App() {
     };
 
     const handleUserWentLive = (data) => {
-      import("./Toolkit/slices/liveSlice").then(({ addLiveUser }) => {
-        dispatch(addLiveUser(data));
-      });
+      dispatch(addLiveUser(data));
     };
 
     const handleLocationUpdated = (data) => {
-      import("./Toolkit/slices/liveSlice").then(({ updateLiveUser }) => {
-        dispatch(updateLiveUser(data));
-      });
+      dispatch(updateLiveUser(data));
     };
 
     const handleUserWentOffline = (data) => {
-      import("./Toolkit/slices/liveSlice").then(({ removeLiveUser }) => {
-        dispatch(removeLiveUser(data.userId));
-      });
+      dispatch(removeLiveUser(data.userId));
     };
 
     socket.on("newNotification", handleNewNotification);

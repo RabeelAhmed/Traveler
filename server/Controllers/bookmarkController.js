@@ -29,7 +29,7 @@ const toggleBookmark = async (req, res) => {
     await curUser.save();
 
     // ── Cache Invalidation ──────────────────────────────────────────────────
-    await deleteCache(`profile:${curUserId}`);
+    await Promise.all([deleteCache(`v2:own-profile:${curUserId}`), require("../Utils/cache").deleteByPattern(`v2:profile:${curUserId}:*`)]);
 
     return res.status(200).send(
       success(200, {

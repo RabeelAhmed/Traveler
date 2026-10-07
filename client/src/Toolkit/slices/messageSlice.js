@@ -30,12 +30,13 @@ export const getOrCreateConversation = createAsyncThunk(
 
 export const getMessages = createAsyncThunk(
   "message/getMessages",
-  async (conversationId, { rejectWithValue }) => {
+  async (input, { rejectWithValue }) => {
+    const { conversationId, before, silent = false } = typeof input === 'string' ? { conversationId: input } : input;
     try {
-      const response = await axiosClient.get(`/message/${conversationId}`);
-      return { conversationId, messages: response.data.result.messages };
+      const response = await axiosClient.get('/message/' + conversationId, { params: { before } });
+      return { conversationId, before, silent, ...response.data.result };
     } catch (error) {
-      toast.error("Error fetching messages");
+      if (!silent) toast.error("Error fetching messages");
       return rejectWithValue(error.response?.data || error.message);
     }
   }
@@ -62,6 +63,7 @@ const messageSlice = createSlice({
     messages: [],
     status: "idle",
     unreadCount: 0,
+    hasMore: false,
   },
   reducers: {
     receiveMessage: (state, action) => {
@@ -93,6 +95,8 @@ const messageSlice = createSlice({
     },
     setActiveConversation: (state, action) => {
       state.activeConversation = action.payload;
+      state.messages = [];
+      state.hasMore = false;
     },
     markConversationRead: (state, action) => {
       const conversationId = action.payload;
@@ -144,11 +148,15 @@ const messageSlice = createSlice({
           state.conversations.unshift(action.payload);
         }
       })
-      .addCase(getMessages.pending, (state) => {
-        state.status = "loading";
+      .addCase(getMessages.pending, (state, action) => {
+        if (!action.meta.arg?.silent) state.status = "loading";
       })
       .addCase(getMessages.fulfilled, (state, action) => {
-        state.messages = action.payload.messages;
+        if (state.activeConversation?._id !== action.payload.conversationId) return;
+        const existing = new Map(state.messages.map(message => [message._id, message]));
+        for (const message of action.payload.messages) existing.set(message._id, message);
+        state.messages = [...existing.values()].sort((a, b) => a._id.localeCompare(b._id));
+        if (!action.payload.silent) state.hasMore = action.payload.hasMore;
         state.status = "succeeded";
         // Mark active conversation read locally
         const convIndex = state.conversations.findIndex((c) => c._id === action.payload.conversationId);
@@ -165,7 +173,7 @@ const messageSlice = createSlice({
       })
       .addCase(sendMessage.fulfilled, (state, action) => {
         const message = action.payload;
-        state.messages.push(message);
+        if (!state.messages.some(item => item._id === message._id)) state.messages.push(message);
         const convIndex = state.conversations.findIndex((c) => c._id === message.conversationId);
         if (convIndex !== -1) {
           const updatedConv = {

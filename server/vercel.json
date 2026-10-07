@@ -1,5 +1,6 @@
 {
   "version": 2,
+  "crons": [{ "path": "/internal/cleanup-stories", "schedule": "0 3 * * *" }],
   "builds": [
     {
       "src": "api/index.js",

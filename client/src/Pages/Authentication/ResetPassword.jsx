@@ -18,6 +18,7 @@ function ResetPassword() {
   const navigate = useNavigate();
 
   const handleResetPassword = async () => {
+    if (password.length < 8 || new TextEncoder().encode(password).length > 72) { toast.error("Password needs at least 8 characters and at most 72 bytes"); return; }
     if (password !== confirmPassword) {
       toast.error("Passwords don't match");
       return;

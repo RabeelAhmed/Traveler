@@ -39,6 +39,7 @@ const Complete = ({ accountSetupInfo, accountInfo }) => {
         interests: accountSetupInfo.interests,
         profilePictureUrl: uploadedProfilePicture?.secure_url || null,
         profilePicturePublicId: uploadedProfilePicture?.public_id || null,
+        profilePictureReceipt: uploadedProfilePicture?.receipt || null,
       };
 
       const response = await axiosClient.post("auth/signup", signupData, {

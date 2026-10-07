@@ -22,7 +22,7 @@ export const likeAndUnlikeStory = createAsyncThunk(
       toast.success(response.data.message);
       return response.data;
     } catch (error) {
-      toast.error(response.data.result.message);
+      toast.error(error.message || "Could not update story");
       return Promise.reject(error);
     }
   }

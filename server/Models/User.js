@@ -67,7 +67,7 @@ const userSchema = new Schema({
   followers: [
     {
       type: Schema.Types.ObjectId,
-      ref: "User",
+      ref: "user",
     },
   ], // List of followers
   following: [
@@ -93,8 +93,9 @@ const userSchema = new Schema({
     enum: [0, 1],
     default: 0, // Set default to 0 (unverified)
   },
-  resetPasswordToken: String,
-  resetPasswordExpires: Date,
+  resetPasswordToken: { type: String, select: false },
+  resetPasswordExpires: { type: Date, select: false },
+  tokenVersion: { type: Number, default: 0, select: false },
   createdAt: {
     type: Date,
     default: Date.now,

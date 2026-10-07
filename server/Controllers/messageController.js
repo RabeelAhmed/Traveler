@@ -1,7 +1,9 @@
 const Conversation = require('../Models/conversation');
+const User = require('../Models/User');
+const mongoose = require('mongoose');
 const Message = require('../Models/message');
 const { success, error } = require('../Utils/responseWrapper');
-const { emitMessagesRead } = require('../socket');
+const { emitMessagesRead, emitMessage } = require('../socket');
 
 // POST /message/conversation
 const getOrCreateConversation = async (req, res) => {
@@ -9,18 +11,16 @@ const getOrCreateConversation = async (req, res) => {
     const { otherUserId } = req.body;
     const curUserId = req.user.user_Id;
 
-    if (!otherUserId) {
-      return res.send(error(400, 'otherUserId is required'));
+    if (!mongoose.isValidObjectId(otherUserId) || otherUserId === curUserId || !await User.exists({ _id: otherUserId })) {
+      return res.status(400).send(error(400, 'otherUserId is required'));
     }
 
-    let conversation = await Conversation.findOne({
-      participants: { $all: [curUserId, otherUserId] }
-    });
-
+    const participants = [curUserId, otherUserId].sort();
+    const participantKey = participants.join(':');
+    let conversation = await Conversation.findOne({ participants: { $all: participants } });
     if (!conversation) {
-      conversation = await Conversation.create({
-        participants: [curUserId, otherUserId]
-      });
+      try { conversation = await Conversation.findOneAndUpdate({ participantKey }, { $setOnInsert: { participants, participantKey } }, { upsert: true, new: true, runValidators: true }); }
+      catch (err) { if (err.code !== 11000) throw err; conversation = await Conversation.findOne({ participantKey }); }
     }
 
     // Populate participants
@@ -32,7 +32,7 @@ const getOrCreateConversation = async (req, res) => {
     return res.send(success(200, { conversation }));
   } catch (err) {
     console.error('getOrCreateConversation error:', err);
-    return res.send(error(500, 'Something went wrong'));
+    return res.status(500).send(error(500, 'Something went wrong'));
   }
 };
 
@@ -51,12 +51,12 @@ const getConversations = async (req, res) => {
       .populate({
         path: 'lastMessage'
       })
-      .sort({ updatedAt: -1 });
+      .sort({ updatedAt: -1 }).limit(100);
 
     return res.send(success(200, { conversations }));
   } catch (err) {
     console.error('getConversations error:', err);
-    return res.send(error(500, 'Something went wrong'));
+    return res.status(500).send(error(500, 'Something went wrong'));
   }
 };
 
@@ -68,7 +68,7 @@ const getMessages = async (req, res) => {
 
     const conversation = await Conversation.findById(conversationId);
     if (!conversation) {
-      return res.send(error(404, 'Conversation not found'));
+      return res.status(404).send(error(404, 'Conversation not found'));
     }
 
     // Verify participant
@@ -79,11 +79,14 @@ const getMessages = async (req, res) => {
       return res.status(403).send(error(403, 'Forbidden'));
     }
 
-    const page = +req.query.page || 1;
+    const page = Number(req.query.page || 1);
+    if (!Number.isSafeInteger(page) || page < 1 || page > 10000) return res.status(400).json(error(400, 'Invalid page'));
+    const before = req.query.before;
+    if (before && !mongoose.isValidObjectId(before)) return res.status(400).json(error(400, 'Invalid message cursor'));
     const limit = 30;
 
-    const messages = await Message.find({ conversationId })
-      .sort({ createdAt: 1 })
+    const messages = await Message.find({ conversationId, ...(before ? { _id: { $lt: before } } : {}) })
+      .sort({ _id: -1 })
       .skip((page - 1) * limit)
       .limit(limit)
       .populate({
@@ -91,9 +94,10 @@ const getMessages = async (req, res) => {
         select: 'fullname profilePicture'
       });
 
+    messages.reverse();
     // Mark other participant's messages as read
     await Message.updateMany(
-      { conversationId, sender: { $ne: curUserId }, isRead: false },
+      { _id: { $in: messages.map(message => message._id) }, sender: { $ne: curUserId }, isRead: false },
       { $set: { isRead: true } }
     );
 
@@ -105,10 +109,10 @@ const getMessages = async (req, res) => {
       emitMessagesRead(otherUserId, conversationId);
     }
 
-    return res.send(success(200, { messages }));
+    return res.send(success(200, { messages, hasMore: messages.length === limit }));
   } catch (err) {
     console.error('getMessages error:', err);
-    return res.send(error(500, 'Something went wrong'));
+    return res.status(500).send(error(500, 'Something went wrong'));
   }
 };
 
@@ -119,13 +123,13 @@ const sendMessage = async (req, res) => {
     const { text } = req.body;
     const curUserId = req.user.user_Id;
 
-    if (!text || !text.trim()) {
-      return res.send(error(400, 'Message text is required'));
+    if (typeof text !== "string" || !text.trim() || text.length > 1000) {
+      return res.status(400).send(error(400, 'Message text is required'));
     }
 
     const conversation = await Conversation.findById(conversationId);
     if (!conversation) {
-      return res.send(error(404, 'Conversation not found'));
+      return res.status(404).send(error(404, 'Conversation not found'));
     }
 
     // Verify participant
@@ -152,10 +156,12 @@ const sendMessage = async (req, res) => {
       select: 'fullname profilePicture'
     });
 
-    return res.send(success(201, { message: newMsg }));
+    const recipient = conversation.participants.find(id => String(id) !== curUserId);
+    if (recipient) emitMessage(recipient, newMsg);
+    return res.status(201).send(success(201, { message: newMsg }));
   } catch (err) {
     console.error('sendMessage error:', err);
-    return res.send(error(500, 'Something went wrong'));
+    return res.status(500).send(error(500, 'Something went wrong'));
   }
 };
 

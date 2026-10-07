@@ -119,4 +119,6 @@ postSchema.pre("findOneAndDelete", async function (next) {
   next();
 });
 
+postSchema.index({ userId: 1, postingDate: -1 });
+postSchema.index({ journeyId: 1, stepIndex: 1 });
 module.exports = mongoose.model("Post", postSchema);

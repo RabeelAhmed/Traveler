@@ -48,7 +48,7 @@ function Login() {
         return;
       }
 
-      console.log(response);
+
       setItem(KEY_ACCESS_TOKEN, response.data.result.token);
       dispatch(setLoggedIn(true));
       navigate(from, { replace: true });

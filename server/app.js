@@ -47,6 +47,8 @@ require('./Utils/cronJobs');
 require('./Utils/redis');
 
 const app = express();
+// Trust only the managed Vercel proxy, or an explicitly configured proxy hop count.
+app.set('trust proxy', process.env.VERCEL ? 1 : Number(process.env.TRUST_PROXY_HOPS || 0));
 
 // ── CORS ──
 const origin_env = process.env.ORIGIN;
@@ -62,16 +64,16 @@ if (origin_env && !allowedOrigins.includes(origin_env)) {
 }
 
 // Log allowed origins on startup
-console.log('✓ Allowed CORS Origins:', allowedOrigins.concat(['https://*.netlify.app']));
+console.log('✓ Allowed CORS Origins:', allowedOrigins);
 
 const checkOrigin = (origin, callback) => {
   if (!origin) {
     return callback(null, true);
   }
 
-  // Check exact matches in whitelist, wildcards for Netlify apps, and localhost ports
+  // Check exact matches in allowlist and local development ports
   const isAllowed = allowedOrigins.includes(origin) ||
-    /^https:\/\/[a-zA-Z0-9-_\.]+\.netlify\.app$/.test(origin) ||
+
     /^http:\/\/localhost:\d+$/.test(origin) ||
     /^http:\/\/127\.0\.0\.1:\d+$/.test(origin);
 
@@ -99,9 +101,14 @@ app.options("*", cors(corsOptions));
 const morganFormat = process.env.NODE_ENV === 'production' ? 'tiny' : 'common';
 app.use(morgan(morganFormat));
 
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
+app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ limit: '2mb', extended: true }));
 
+app.use((req, res, next) => {
+  const json = res.json.bind(res);
+  res.json = body => { if (body && Number.isInteger(body.statusCode) && body.statusCode >= 100 && body.statusCode <= 599) res.status(body.statusCode); return json(body); };
+  next();
+});
 // ── Routes ──
 app.use('/auth',       require('./Routers/authenticationRouters'));
 app.use('/story',      require('./Routers/storyRouter'));
@@ -114,10 +121,22 @@ app.use('/message',    require('./Routers/messageRouter'));
 app.use('/review',     require('./Routers/reviewRouter'));
 app.use('/live',       require('./Routers/liveRouter'));
 
+// Handle parsing and upload errors without leaking server details.
+app.use((err, req, res, next) => {
+  console.error('Request failed:', err.message);
+  if (res.headersSent) return next(err);
+  const status = err.code === 'LIMIT_FILE_SIZE' ? 413 : err.name === 'MulterError' || /Unsupported file|Profile pictures must/.test(err.message) ? 400 : err.name === 'ValidationError' || err.name === 'CastError' || err instanceof SyntaxError ? 400 : 500;
+  res.status(status).json({ status: 'error', statusCode: status, message: status === 500 ? 'Request failed' : err.message });
+});
 // ── Health Check ──
+app.get('/internal/cleanup-stories', async (req, res) => {
+  if (!process.env.CRON_SECRET || req.headers.authorization !== `Bearer ${process.env.CRON_SECRET}`) return res.status(401).json({ message: 'Unauthorized' });
+  try { res.json(await require('./Utils/storyCleanup').cleanupExpiredStories()); }
+  catch (err) { console.error('Cleanup failed:', err.message); res.status(500).json({ message: 'Cleanup failed' }); }
+});
 app.get('/health', (req, res) => {
-  res.status(200).json({
-    status:    'ok',
+  res.status(require('mongoose').connection.readyState === 1 ? 200 : 503).json({
+    status:    require('mongoose').connection.readyState === 1 ? 'ok' : 'degraded',
     service:   'Traveler API',
     version:   '1.0.0',
     uptime:    process.uptime(),

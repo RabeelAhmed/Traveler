@@ -9,7 +9,7 @@ const createOrUpdateReview = async (req, res) => {
     const curUserId = req.user.user_Id;
 
     if (!location || !rating || !title || !body || !visitedAt) {
-      return res.send(error(400, 'location, rating, title, body, and visitedAt are required'));
+      return res.status(400).send(error(400, 'location, rating, title, body, and visitedAt are required'));
     }
 
     const existing = await Review.findOne({ author: curUserId, location });
@@ -27,9 +27,9 @@ const createOrUpdateReview = async (req, res) => {
   } catch (err) {
     console.error('createOrUpdateReview error:', err);
     if (err.code === 11000) {
-      return res.send(error(409, 'You already reviewed this location'));
+      return res.status(409).send(error(409, 'You already reviewed this location'));
     }
-    return res.send(error(500, 'Something went wrong'));
+    return res.status(500).send(error(500, 'Something went wrong'));
   }
 };
 
@@ -40,7 +40,7 @@ const getReviewsForLocation = async (req, res) => {
     const { location } = req.query;
 
     if (!location) {
-      return res.send(error(400, 'location query parameter is required'));
+      return res.status(400).send(error(400, 'location query parameter is required'));
     }
 
     const [reviews, aggregation] = await Promise.all([
@@ -82,7 +82,7 @@ const getReviewsForLocation = async (req, res) => {
     return res.send(success(200, { reviews, summary }));
   } catch (err) {
     console.error('getReviewsForLocation error:', err);
-    return res.send(error(500, 'Something went wrong'));
+    return res.status(500).send(error(500, 'Something went wrong'));
   }
 };
 
@@ -94,7 +94,7 @@ const getMyReview = async (req, res) => {
     const curUserId = req.user.user_Id;
 
     if (!location) {
-      return res.send(error(400, 'location query parameter is required'));
+      return res.status(400).send(error(400, 'location query parameter is required'));
     }
 
     const review = await Review.findOne({ author: curUserId, location })
@@ -103,7 +103,7 @@ const getMyReview = async (req, res) => {
     return res.send(success(200, { review: review || null }));
   } catch (err) {
     console.error('getMyReview error:', err);
-    return res.send(error(500, 'Something went wrong'));
+    return res.status(500).send(error(500, 'Something went wrong'));
   }
 };
 
@@ -116,7 +116,7 @@ const deleteReview = async (req, res) => {
 
     const review = await Review.findById(id);
     if (!review) {
-      return res.send(error(404, 'Review not found'));
+      return res.status(404).send(error(404, 'Review not found'));
     }
 
     if (review.author.toString() !== curUserId) {
@@ -127,7 +127,7 @@ const deleteReview = async (req, res) => {
     return res.send(success(200, { message: 'Review deleted successfully' }));
   } catch (err) {
     console.error('deleteReview error:', err);
-    return res.send(error(500, 'Something went wrong'));
+    return res.status(500).send(error(500, 'Something went wrong'));
   }
 };
 
@@ -140,7 +140,7 @@ const markHelpful = async (req, res) => {
 
     const review = await Review.findById(id);
     if (!review) {
-      return res.send(error(404, 'Review not found'));
+      return res.status(404).send(error(404, 'Review not found'));
     }
 
     const alreadyHelpful = review.helpful.some(
@@ -163,7 +163,7 @@ const markHelpful = async (req, res) => {
     );
   } catch (err) {
     console.error('markHelpful error:', err);
-    return res.send(error(500, 'Something went wrong'));
+    return res.status(500).send(error(500, 'Something went wrong'));
   }
 };
 

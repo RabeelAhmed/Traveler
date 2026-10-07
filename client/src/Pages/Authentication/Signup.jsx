@@ -31,7 +31,7 @@ const Signup = () => {
 
   const handleNext = () => {
     if (currentStep === 1) {
-      console.log(accountInfo);
+
       const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     
       if (!accountInfo.username.trim()) {
@@ -56,14 +56,14 @@ const Signup = () => {
         toast.error("Password is required");
         return;
       }
-      if (accountInfo.password.length < 6) {
-        toast.error("Password must be at least 6 characters");
+      if (accountInfo.password.length < 8 || new TextEncoder().encode(accountInfo.password).length > 72) {
+        toast.error("Password must be at least 8 characters");
         return;
       }
     }
 
     if (currentStep === 2) {
-      console.log(accountSetupInfo);
+
       let error = "";
     
       if (!accountSetupInfo.fullname.trim()) {

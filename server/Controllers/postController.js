@@ -1,3 +1,5 @@
+const { signMedia, verifyMediaList } = require("../Utils/mediaReceipt");
+const { escapeRegex, PUBLIC_USER_FIELDS } = require("../Utils/security");
 const Post = require("../Models/post");
 const user = require("../Models/User");
 const mongoose = require("mongoose");
@@ -8,25 +10,26 @@ const Notification = require("../Models/notification");
 const { notify, broadcastNewPost } = require("../socket");
 const { remember, deleteCache, deleteByPattern, TTL } = require("../Utils/cache");
 
+const invalidateSocialViews = () => Promise.all(['feed:*', 'v2:post:*', 'v2:profile:*', 'v2:own-profile:*', 'v2:search:*', 'trending:*'].map(pattern => require('../Utils/cache').deleteByPattern(pattern)));
 const createPost = async (req, res) => {
   try {
     const { title, description, location, rating, tags, media, hashtags } = req.body;
 
     if (!title || !description || !location || !rating || !media || !hashtags) {
-      return res.send(error(400, "All fields are required"));
+      return res.status(400).send(error(400, "All fields are required"));
     }
 
-    const parsedMedia = JSON.parse(media);
-    const parsedHashtags = JSON.parse(hashtags);
+    const parsedMedia = typeof media === "string" ? JSON.parse(media) : media;
+    const parsedHashtags = typeof hashtags === "string" ? JSON.parse(hashtags) : hashtags;
 
-    if (!Array.isArray(parsedMedia)) {
-      return res.send(error(400, "Media must be an array"));
+    if (!verifyMediaList(parsedMedia, req.user.user_Id)) {
+      return res.status(400).send(error(400, "Media must come from your own uploads"));
     }
 
     if (tags && tags.length > 0) {
       const existingUsers = await user.find({ username: { $in: tags } });
       if (existingUsers.length !== tags.length) {
-        return res.send(error(400, "Some tagged users do not exist"));
+        return res.status(400).send(error(400, "Some tagged users do not exist"));
       }
     }
 
@@ -41,6 +44,7 @@ const createPost = async (req, res) => {
         auther.badges = auther.badges || [];
         auther.badges.push({ name: achivement, awardedAt: new Date() });
         await auther.save();
+    await invalidateSocialViews();
       }
     }
 
@@ -50,6 +54,7 @@ const createPost = async (req, res) => {
       if (!alreadyHasBadge) {
         auther.badges.push({ name: achivement, awardedAt: new Date() });
         await auther.save();
+    await invalidateSocialViews();
 
         const notification = new Notification({
           recipient: req.user.user_Id,
@@ -76,30 +81,33 @@ const createPost = async (req, res) => {
 
     auther.posts.push(newPost._id);
     await auther.save();
+    await invalidateSocialViews();
 
     // Real-time feed update: push the new post to all online followers
     if (auther.followers?.length > 0) {
       const populated = await Post.findById(newPost._id)
-        .populate('userId')
+        .populate('userId', PUBLIC_USER_FIELDS)
         .populate({ path: 'comments', populate: { path: 'userId', select: 'fullname profilePicture' } });
       const mappedPost = mapPostOutput(populated, auther_Id);
       broadcastNewPost(auther.followers, mappedPost);
     }
 
+    await invalidateSocialViews();
     // ── Cache Invalidation ──────────────────────────────────────────────────
     await Promise.all([
       deleteCache(`feed:${auther_Id}`),
-      deleteCache(`profile:${auther_Id}`),
+      Promise.all([deleteCache(`v2:own-profile:${auther_Id}`), require("../Utils/cache").deleteByPattern(`v2:profile:${auther_Id}:*`)]),
       deleteCache('trending:destinations'),
       deleteCache('trending:tags'),
     ]);
 
+    await invalidateSocialViews();
     const message = "Post has been uploaded";
     return res.send(success(201, { newPost, message, achivement }));
 
   } catch (err) {
     console.error("CreatePost Error:", err);
-    return res.send(error(500, "Something went wrong"));
+    return res.status(500).send(error(500, "Something went wrong"));
   }
 };
 
@@ -157,10 +165,11 @@ const uploadMediaController = async (req, res) => {
       }
     }
 
+    for (const item of media) item.receipt = signMedia(item, req.user.user_Id, "post");
     return res.send(success(200, { media }));
   } catch (err) {
     console.error("uploadMediaController error:", err);
-    return res.send(error(400, err.message));
+    return res.status(400).send(error(400, err.message));
   }
 };
 
@@ -191,7 +200,7 @@ const likeAndUnlikePost = async (req, res) => {
     const { postId } = req.body;
     const curUserId = req.user.user_Id;
 
-    const post = await Post.findById(postId).populate("userId");
+    const post = await Post.findById(postId).populate("userId", PUBLIC_USER_FIELDS);
     const postOwner = await user.findById(post.userId);
     if (!post) {
       return res.status(404).json(error(404, "Post Not Found"));
@@ -232,8 +241,7 @@ const likeAndUnlikePost = async (req, res) => {
       : "You have liked the post.";
     const updatedPost = await Post.findByIdAndUpdate(postId, updateOperation, {
       new: true,
-    }).populate("userId");
-    console.log(updatedPost);
+    }).populate("userId", PUBLIC_USER_FIELDS);
     const responsePost = await updatedPost.populate({
       path: "comments",
       populate: {
@@ -241,8 +249,6 @@ const likeAndUnlikePost = async (req, res) => {
         select: "fullname profilePicture",
       },
     });
-
-    console.log("post user", post.userId._id, "Post Id", postId);
     if (!isLiked) {
       if (!(post.userId._id.toString() === curUserId)) {
         const notification = new Notification({
@@ -258,7 +264,7 @@ const likeAndUnlikePost = async (req, res) => {
 
     // ── Cache Invalidation ──────────────────────────────────────────────────
     await Promise.all([
-      deleteCache(`post:${postId}`),
+      require("../Utils/cache").deleteByPattern(`v2:post:${postId}:*`),
       deleteCache(`feed:${curUserId}`),
     ]);
 
@@ -291,7 +297,6 @@ const addComment = async (req, res) => {
     let achivement;
     if (post.comments.length === 0) {
       achivement = "Nature_Lover";
-      console.log("In COmment");
       const hasBadge = postOwner.badges.some((obj) => obj.name === achivement);
 
       if (!hasBadge) {
@@ -314,9 +319,10 @@ const addComment = async (req, res) => {
 
     post.comments.push(comment);
     await post.save();
+    await invalidateSocialViews();
 
     let responsePost = await Post.findById(postId)
-      .populate({ path: "userId" })
+      .populate({ path: "userId", select: PUBLIC_USER_FIELDS })
       .populate({
         path: "comments",
         populate: {
@@ -326,7 +332,6 @@ const addComment = async (req, res) => {
       });
     responsePost = mapPostOutput(responsePost, curUserId);
     responsePost.comments = responsePost.comments.reverse();
-    console.log(responsePost.comments);
 
     if (post.userId.toString() !== curUserId) {
       const notification = new Notification({
@@ -335,19 +340,17 @@ const addComment = async (req, res) => {
         type: "comment",
         post: postId,
       });
-      console.log("Inside Notify");
       await notification.save();
-      console.log("Entring Notify");
       notify(notification);
     }
 
     // ── Cache Invalidation ──────────────────────────────────────────────────
-    await deleteCache(`post:${postId}`);
+    await require("../Utils/cache").deleteByPattern(`v2:post:${postId}:*`);
 
     return res.status(200).json(success(200, { responsePost }));
   } catch (err) {
     console.error("Error in addComment:", err);
-    return res.send(error(500, "Something went wrong"));
+    return res.status(500).send(error(500, "Something went wrong"));
   }
 };
 
@@ -369,9 +372,10 @@ const deleteComment = async (req, res) => {
     if (comment.userId._id.toString() === curUserId) {
       post.comments.pull(commentId);
       await post.save();
+    await invalidateSocialViews();
 
       // ── Cache Invalidation ──────────────────────────────────────────────
-      await deleteCache(`post:${postId}`);
+      await require("../Utils/cache").deleteByPattern(`v2:post:${postId}:*`);
 
       return res
         .status(200)
@@ -382,7 +386,7 @@ const deleteComment = async (req, res) => {
         .json(error(403, "Unauthorized to delete this comment"));
     }
   } catch (err) {
-    return res.send(error(500, "Something went wrong"));
+    return res.status(500).send(error(500, "Something went wrong"));
   }
 };
 
@@ -390,13 +394,13 @@ const deletePost = async (req, res) => {
   try {
     const { postId } = req.body;
     const curUserId = req.user.user_Id;
-    const post = await Post.findById(postId).populate("userId");
+    const post = await Post.findById(postId).populate("userId", PUBLIC_USER_FIELDS);
     const curUser = await user.findById(curUserId);
     if (!post) {
-      return res.send(error(404, "Post Not Found"));
+      return res.status(404).send(error(404, "Post Not Found"));
     }
     if (post.userId._id.toString() !== curUserId) {
-      return res.send(error(403, "Only Owners can Delete Their Post"));
+      return res.status(403).send(error(403, "Only Owners can Delete Their Post"));
     }
     const index = curUser.posts.indexOf(postId);
     if (index > -1) {
@@ -405,12 +409,13 @@ const deletePost = async (req, res) => {
     }
 
     await Post.findByIdAndDelete(postId);
+    await invalidateSocialViews();
 
     // ── Cache Invalidation ──────────────────────────────────────────────────
     await Promise.all([
-      deleteCache(`post:${postId}`),
+      require("../Utils/cache").deleteByPattern(`v2:post:${postId}:*`),
       deleteCache(`feed:${curUserId}`),
-      deleteCache(`profile:${curUserId}`),
+      Promise.all([deleteCache(`v2:own-profile:${curUserId}`), require("../Utils/cache").deleteByPattern(`v2:profile:${curUserId}:*`)]),
       deleteCache('trending:destinations'),
       deleteCache('trending:tags'),
     ]);
@@ -419,7 +424,7 @@ const deletePost = async (req, res) => {
       .status(200)
       .json(success(200, { post: mapPostOutput(post, curUserId) }));
   } catch (err) {
-    return res.send(error(500, "Something went wrong"));
+    return res.status(500).send(error(500, "Something went wrong"));
   }
 };
 
@@ -428,15 +433,15 @@ const getPost = async (req, res) => {
     const { _id } = req.params;
 
     if (!mongoose.Types.ObjectId.isValid(_id)) {
-      return res.status(400).send(error("Invalid post ID"));
+      return res.status(400).send(error(400, "Invalid post ID"));
     }
 
     const curUserId = req.user?.user_Id || null;
-    const cacheKey = `post:${_id}`;
+    const cacheKey = `v2:post:${_id}:${curUserId || "guest"}`;
 
     const postData = await remember(cacheKey, TTL.POST, async () => {
       const post = await Post.findById(_id)
-        .populate("userId")
+        .populate("userId", PUBLIC_USER_FIELDS)
         .populate("comments.userId");
 
       if (!post) return null;
@@ -444,13 +449,13 @@ const getPost = async (req, res) => {
     });
 
     if (!postData) {
-      return res.status(404).send(error("Post Not Found"));
+      return res.status(404).send(error(404, "Post Not Found"));
     }
 
     return res.status(200).send(success(200, { post: postData }));
   } catch (err) {
     console.error(err);
-    return res.status(500).send(error("Something went wrong"));
+    return res.status(500).send(error(500, "Something went wrong"));
   }
 };
 
@@ -471,25 +476,27 @@ const searchAll = async (req, res) => {
       query = query.slice(1);
     }
 
-    const cacheKey = `search:${query.toLowerCase()}`;
+    if (query.length > 100) return res.status(400).json(error(400, "Search is limited to 100 characters"));
+    const searchPattern = escapeRegex(query);
+    const cacheKey = `v2:search:${curUserId}:${query.toLowerCase()}`;
 
     const results = await remember(cacheKey, TTL.SEARCH, async () => {
       const users = await user
         .find({
           $or: [
-            { fullname: { $regex: query, $options: "i" } },
-            { username: { $regex: query, $options: "i" } },
-            { bio: { $regex: query, $options: "i" } },
+            { fullname: { $regex: searchPattern, $options: "i" } },
+            { username: { $regex: searchPattern, $options: "i" } },
+            { bio: { $regex: searchPattern, $options: "i" } },
           ],
         })
         .select("username fullname profilePicture bio");
 
       const postFilter = {
         $or: [
-          { title: { $regex: query, $options: "i" } },
-          { description: { $regex: query, $options: "i" } },
-          { location: { $regex: query, $options: "i" } },
-          { hashtags: { $regex: query, $options: "i" } },
+          { title: { $regex: searchPattern, $options: "i" } },
+          { description: { $regex: searchPattern, $options: "i" } },
+          { location: { $regex: searchPattern, $options: "i" } },
+          { hashtags: { $regex: searchPattern, $options: "i" } },
         ],
       };
 
@@ -562,7 +569,7 @@ const getTrendingTags = async (req, res) => {
     return res.send(success(200, { tags }));
   } catch (err) {
     console.error('getTrendingTags error:', err);
-    return res.send(error(500, 'Something went wrong'));
+    return res.status(500).send(error(500, 'Something went wrong'));
   }
 };
 

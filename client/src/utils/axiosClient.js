@@ -1,44 +1,20 @@
-import axios from "axios";
-import { getItem,KEY_ACCESS_TOKEN } from "./LocalStorageManager";
-const REACT_APP_SERVER_BASE_URL = import.meta.env.VITE_SERVER_BASE_URL;
-console.log(REACT_APP_SERVER_BASE_URL);
-export const axiosClient = axios.create({
-    baseURL:REACT_APP_SERVER_BASE_URL,
-    withCredentials :true,
-})
-console.log(" Axios Base URL:", REACT_APP_SERVER_BASE_URL)
-
-axiosClient.interceptors.request.use(
-    (request) =>{
-        const  accessToken= getItem(KEY_ACCESS_TOKEN);
-        request.headers['Authorization'] =  `Bearer ${accessToken}`; 
-        return request;
-    },
-)
-
-axiosClient.interceptors.response.use(
-    (response) => {
-      return response; // Return response if it's successful
-    },
-    (error) => {
-      let errorMessage = 'An unexpected error occurred.';
-  
-      // Check for specific error codes
-      if (error.response) {
-        // Handle errors from the server (status code is 4xx or 5xx)
-        if (error.response.status === 404) {
-          errorMessage = 'User not found.';
-        } else if (error.response.status === 500) {
-          errorMessage = 'Server error. Please try again later.';
-        } else {
-          errorMessage = error.response.data.message || 'Something went wrong!';
-        }
-      } else {
-        // Handle network errors (e.g., no internet connection)
-        errorMessage = 'Network error. Please check your internet connection.';
-      }
-  
-      // Throw the error message
-      return Promise.reject(new Error(errorMessage));
-    }
-  );
+import axios from 'axios';
+import { getItem, removeItem, KEY_ACCESS_TOKEN } from './LocalStorageManager';
+export const axiosClient = axios.create({ baseURL: import.meta.env.VITE_SERVER_BASE_URL, timeout: 30000 });
+axiosClient.interceptors.request.use(request => {
+  const token = getItem(KEY_ACCESS_TOKEN);
+  if (token) request.headers.Authorization = 'Bearer ' + token;
+  return request;
+});
+axiosClient.interceptors.response.use(response => {
+  if (response.data?.status === 'error') {
+    const error = new Error(response.data.message || 'Request failed');
+    error.response = response;
+    return Promise.reject(error);
+  }
+  return response;
+}, error => {
+  if (error.response?.status === 401 && getItem(KEY_ACCESS_TOKEN)) { removeItem(KEY_ACCESS_TOKEN); window.location.assign('/login'); }
+  error.message = error.response?.data?.message || error.response?.data?.error || error.message || 'Request failed';
+  return Promise.reject(error);
+});

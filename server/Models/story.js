@@ -68,4 +68,5 @@ storySchema.pre("findOneAndDelete", async function (next) {
 });
 
 const Story = mongoose.model('Story', storySchema);
+storySchema.index({ createdAt: 1 });
 module.exports = Story;

@@ -4,6 +4,11 @@ const fs = require('fs');
 const path = require('path');
 
 const app = express();
+const haversine = (lat1, lon1, lat2, lon2) => {
+  const radians = value => value * Math.PI / 180;
+  const a = Math.sin(radians(lat2 - lat1) / 2) ** 2 + Math.cos(radians(lat1)) * Math.cos(radians(lat2)) * Math.sin(radians(lon2 - lon1) / 2) ** 2;
+  return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+};
 
 const allowedOrigins = [
   'https://traveler-social.netlify.app',
@@ -136,7 +141,7 @@ app.get('/recommend/geo', (req, res) => {
   const lat = parseFloat(req.query.lat);
   const lon = parseFloat(req.query.lon);
 
-  if (isNaN(lat) || isNaN(lon)) {
+  if (!Number.isFinite(lat) || !Number.isFinite(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
     return res.status(400).json({ error: 'Invalid or missing latitude/longitude' });
   }
 
@@ -144,7 +149,7 @@ app.get('/recommend/geo', (req, res) => {
   let nearest = null;
 
   for (const d of destinations) {
-    const dist = Math.pow(d.latitude - lat, 2) + Math.pow(d.longitude - lon, 2);
+    const dist = haversine(lat, lon, d.latitude, d.longitude);
     if (dist < minDist) {
       minDist = dist;
       nearest = d;
@@ -161,7 +166,7 @@ app.get('/recommend/geo', (req, res) => {
 const port = process.env.PORT || 5001;
 if (!process.env.VERCEL) {
   app.listen(port, () => {
-    console.log(`Travel Advisor Mock Engine listening on port ${port}`);
+    console.log(`Travel Advisor Dataset Engine listening on port ${port}`);
   });
 }
 

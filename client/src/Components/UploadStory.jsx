@@ -139,7 +139,7 @@ const UploadStory = () => {
         // Step 4: Post story to backend
         const process = await axiosClient.post(
           "/story/addstory",
-          { title, url: uploadedUrl, publicId, lat, long },
+          { title, url: uploadedUrl, publicId, lat, long, resourceType: uploadRes.data.result.resourceType, receipt: uploadRes.data.result.receipt },
           {
             onUploadProgress: (e) => {
               const percent = 50 + Math.round((e.loaded / e.total) * 50);

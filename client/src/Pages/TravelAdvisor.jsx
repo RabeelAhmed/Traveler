@@ -3,16 +3,14 @@ import { FaMapMarkerAlt, FaArrowLeft, FaUndo } from "react-icons/fa";
 import { MdOutlineTravelExplore } from "react-icons/md";
 import { motion, AnimatePresence } from "framer-motion";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
-import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import Header from "../Components/Header";
 import MoreInfoModal from "../Components/MoreInfoModel";
 import { toast } from "react-hot-toast";
 import PageTransition from "../Components/PageTransition";
-import { springPress, scaleIn, fadeUp, staggerContainer } from "../utils/motion";
+import { springPress, fadeUp, staggerContainer } from "../utils/motion";
 import agentClient from "../utils/agentClient";
 
-const ADVISOR_APP_SERVER_BASE_URL = import.meta.env.VITE_TRAVEL_ADVISOR_BASE_URL;
 
 const slideVariants = {
   enter: (dir) => ({
@@ -348,6 +346,12 @@ const TravelAdvisor = () => {
                   </motion.button>
                 </div>
 
+                <div className="h-72 w-full rounded-3xl overflow-hidden border border-sand-200" aria-label="Recommended destination locations">
+                  <MapContainer key={province + destinationType} bounds={results.map(place => [place.latitude, place.longitude])} boundsOptions={{ padding: [30, 30], maxZoom: 12 }} scrollWheelZoom={false} className="h-full w-full">
+                    <TileLayer attribution="&copy; CARTO" url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
+                    {results.map(place => <Marker key={place._key} position={[place.latitude, place.longitude]}><Popup>{place._key}</Popup></Marker>)}
+                  </MapContainer>
+                </div>
                 {/* Horizontal Discovery Stack on Mobile, Grid on Desktop */}
                 <motion.div
                   variants={staggerContainer(0.06, 0.04)}
@@ -355,41 +359,12 @@ const TravelAdvisor = () => {
                   animate="visible"
                   className="flex md:grid overflow-x-auto md:overflow-visible snap-x snap-mandatory flex-nowrap md:flex-wrap md:grid-cols-2 lg:grid-cols-3 gap-6 pb-6 md:pb-0 scrollbar-none"
                 >
-                  {results.map((place, index) => (
+                  {results.map((place) => (
                     <motion.div
-                      key={index}
+                      key={place._key}
                       variants={fadeUp}
                       className="w-[85vw] md:w-auto flex-shrink-0 snap-center bg-white rounded-3xl border border-sand-100/80 shadow-[0_8px_30px_rgb(20,41,57,0.015)] p-5 flex flex-col gap-4 text-left"
                     >
-                      {/* Leaflet map inside card */}
-                      <div className="h-44 w-full rounded-2xl overflow-hidden relative shadow-inner border border-sand-100">
-                        {/* Developer Note: Mounting one full MapContainer per result card may need lazy-loading/virtualization if result counts grow. */}
-                        <MapContainer
-                          center={[place.latitude, place.longitude]}
-                          zoom={12}
-                          scrollWheelZoom={false}
-                          className="h-full w-full absolute inset-0 z-0"
-                        >
-                          <TileLayer
-                            attribution="&copy; <a href='https://carto.com/'>CARTO</a> voyager"
-                            url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-                          />
-                          <Marker
-                            position={[place.latitude, place.longitude]}
-                            icon={L.divIcon({
-                              className: "custom-leaflet-marker",
-                              html: `<div class="leaflet-marker-icon-animated w-8 h-8 rounded-full border-2 border-white bg-ocean-600 shadow-md flex items-center justify-center text-white text-xs font-bold font-sans">
-                                📍
-                              </div>`,
-                              iconSize: [28, 28],
-                              iconAnchor: [14, 28],
-                            })}
-                          >
-                            <Popup>{place._key}</Popup>
-                          </Marker>
-                        </MapContainer>
-                      </div>
-
                       {/* Info body */}
                       <div className="flex-1 flex flex-col justify-between">
                         <div>

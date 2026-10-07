@@ -1,3 +1,4 @@
+const { verifyMediaList } = require("../Utils/mediaReceipt");
 const Journey = require("../Models/journey");
 const Post = require("../Models/post");
 const User = require("../Models/User");
@@ -7,51 +8,33 @@ const { mapPostOutput } = require("../Utils/utils");
 const Notification = require('../Models/notification');
 const { notify, broadcastNewPost } = require('../socket');
 
+const invalidateSocialViews = () => Promise.all(['feed:*', 'v2:post:*', 'v2:profile:*', 'v2:own-profile:*', 'v2:search:*', 'trending:*'].map(pattern => require('../Utils/cache').deleteByPattern(pattern)));
 const startJourney = async (req, res) => {
   try {
     const { title, description, location, media, rating, hashtags } = req.body;
 
     if (!title || !description || !location || !media) {
-      return res.send(error(400, "All fields (title, description, location, media) are required to start a journey"));
+      return res.status(400).send(error(400, "All fields (title, description, location, media) are required to start a journey"));
     }
 
     const curUserId = req.user.user_Id;
     const author = await User.findById(curUserId);
     if (!author) {
-      return res.send(error(404, "User not found"));
+      return res.status(404).send(error(404, "User not found"));
     }
 
     const parsedMedia = typeof media === "string" ? JSON.parse(media) : (media || []);
     const parsedHashtags = typeof hashtags === "string" ? JSON.parse(hashtags) : (hashtags || []);
+    if (!verifyMediaList(parsedMedia, curUserId)) return res.status(400).json(error(400, "Media must come from your own uploads"));
 
     const journeyId = new mongoose.Types.ObjectId();
 
-    // 1. Create first Post (Step 0)
-    const newPost = await Post.create({
-      userId: curUserId,
-      title,
-      description,
-      location,
-      rating: rating || 5, // Rating is conditionally required, default to 5 if not provided
-      media: parsedMedia,
-      hashtags: parsedHashtags,
-      journeyId,
-      stepIndex: 0,
+    let newPost, newJourney;
+    await mongoose.connection.transaction(async session => {
+      [newPost] = await Post.create([{ userId: curUserId, title, description, location, rating: rating || 5, media: parsedMedia, hashtags: parsedHashtags, journeyId, stepIndex: 0 }], { session });
+      [newJourney] = await Journey.create([{ _id: journeyId, owner: curUserId, title, steps: [newPost._id], isActive: true, startedAt: new Date() }], { session });
+      await User.updateOne({ _id: curUserId }, { $addToSet: { posts: newPost._id } }, { session });
     });
-
-    // 2. Create the Journey
-    const newJourney = await Journey.create({
-      _id: journeyId,
-      owner: curUserId,
-      title,
-      steps: [newPost._id],
-      isActive: true,
-      startedAt: new Date(),
-    });
-
-    // 3. Add Post to User's posts
-    author.posts.push(newPost._id);
-    await author.save();
 
     // Notify all followers that a new journey has started
     if (author.followers?.length > 0) {
@@ -74,16 +57,17 @@ const startJourney = async (req, res) => {
       }
     }
 
+    await invalidateSocialViews();
     return res.send(
       success(201, {
         journey: newJourney,
-        post: mapPostOutput(newPost, curUserId),
+        post: mapPostOutput(await newPost.populate("userId"), curUserId),
         message: "Journey started successfully",
       })
     );
   } catch (err) {
     console.error("StartJourney Error:", err);
-    return res.send(error(500, "Something went wrong starting the journey"));
+    return res.status(500).send(error(500, "Something went wrong starting the journey"));
   }
 };
 
@@ -93,56 +77,45 @@ const addStep = async (req, res) => {
     const { description, location, media, rating, hashtags } = req.body;
 
     if (!description || !location || !media) {
-      return res.send(error(400, "All fields (description, location, media) are required to add a step"));
+      return res.status(400).send(error(400, "All fields (description, location, media) are required to add a step"));
     }
 
     const curUserId = req.user.user_Id;
     const journey = await Journey.findById(id);
 
     if (!journey) {
-      return res.send(error(404, "Journey not found"));
+      return res.status(404).send(error(404, "Journey not found"));
     }
 
     if (!journey.isActive) {
-      return res.send(error(400, "This journey is completed. No more steps can be added."));
+      return res.status(400).send(error(400, "This journey is completed. No more steps can be added."));
     }
 
     const canContribute =
       journey.owner.toString() === curUserId ||
       journey.collaborators.map((c) => c.toString()).includes(curUserId);
     if (!canContribute) {
-      return res.send(error(403, 'Not authorized to add steps to this journey'));
+      return res.status(403).send(error(403, 'Not authorized to add steps to this journey'));
     }
 
     const author = await User.findById(curUserId);
     if (!author) {
-      return res.send(error(404, "User not found"));
+      return res.status(404).send(error(404, "User not found"));
     }
 
     const parsedMedia = typeof media === "string" ? JSON.parse(media) : (media || []);
     const parsedHashtags = typeof hashtags === "string" ? JSON.parse(hashtags) : (hashtags || []);
-    const stepIndex = journey.steps.length;
-
-    // Create the Post for this step
-    const newPost = await Post.create({
-      userId: curUserId,
-      title: `${journey.title} - Stop ${stepIndex + 1}`,
-      description,
-      location,
-      rating: rating || 5,
-      media: parsedMedia,
-      hashtags: parsedHashtags,
-      journeyId: journey._id,
-      stepIndex,
+    if (!verifyMediaList(parsedMedia, curUserId)) return res.status(400).json(error(400, "Media must come from your own uploads"));
+    let newPost;
+    await mongoose.connection.transaction(async session => {
+      const current = await Journey.findOne({ _id: id, isActive: true, $or: [{ owner: curUserId }, { collaborators: curUserId }] }).session(session);
+      if (!current) throw new Error('Journey is no longer active or accessible');
+      const stepIndex = current.steps.length;
+      [newPost] = await Post.create([{ userId: curUserId, title: current.title + ' - Stop ' + (stepIndex + 1), description, location, rating: rating || 5, media: parsedMedia, hashtags: parsedHashtags, journeyId: current._id, stepIndex }], { session });
+      current.steps.push(newPost._id);
+      await current.save({ session });
+      await User.updateOne({ _id: curUserId }, { $addToSet: { posts: newPost._id } }, { session });
     });
-
-    // Push step post to journey
-    journey.steps.push(newPost._id);
-    await journey.save();
-
-    // Push post to user posts
-    author.posts.push(newPost._id);
-    await author.save();
 
     // Notify all followers of the journey owner + broadcast to their feeds
     const owner = await User.findById(journey.owner).select('followers');
@@ -164,6 +137,7 @@ const addStep = async (req, res) => {
       }
     }
 
+    await invalidateSocialViews();
     return res.send(
       success(201, {
         post: mapPostOutput(newPost, curUserId),
@@ -172,7 +146,7 @@ const addStep = async (req, res) => {
     );
   } catch (err) {
     console.error("AddStep Error:", err);
-    return res.send(error(500, "Something went wrong adding step"));
+    return res.status(500).send(error(500, "Something went wrong adding step"));
   }
 };
 
@@ -183,11 +157,11 @@ const endJourney = async (req, res) => {
     const journey = await Journey.findById(id);
 
     if (!journey) {
-      return res.send(error(404, "Journey not found"));
+      return res.status(404).send(error(404, "Journey not found"));
     }
 
     if (journey.owner.toString() !== curUserId) {
-      return res.send(error(403, "Only the owner can complete this journey"));
+      return res.status(403).send(error(403, "Only the owner can complete this journey"));
     }
 
     journey.isActive = false;
@@ -209,6 +183,7 @@ const endJourney = async (req, res) => {
       }
     }
 
+    await invalidateSocialViews();
     return res.send(
       success(200, {
         journey,
@@ -217,7 +192,7 @@ const endJourney = async (req, res) => {
     );
   } catch (err) {
     console.error("EndJourney Error:", err);
-    return res.send(error(500, "Something went wrong completing the journey"));
+    return res.status(500).send(error(500, "Something went wrong completing the journey"));
   }
 };
 
@@ -247,7 +222,7 @@ const getJourney = async (req, res) => {
       });
 
     if (!journey) {
-      return res.send(error(404, "Journey not found"));
+      return res.status(404).send(error(404, "Journey not found"));
     }
 
     // Format steps using mapPostOutput to match feed post structure
@@ -271,7 +246,7 @@ const getJourney = async (req, res) => {
     );
   } catch (err) {
     console.error("GetJourney Error:", err);
-    return res.send(error(500, "Something went wrong retrieving journey details"));
+    return res.status(500).send(error(500, "Something went wrong retrieving journey details"));
   }
 };
 
@@ -282,20 +257,20 @@ const inviteCollaborator = async (req, res) => {
     const { userId } = req.body;
     const curUserId = req.user.user_Id;
 
-    if (!userId) return res.send(error(400, 'userId is required'));
+    if (!userId) return res.status(400).send(error(400, 'userId is required'));
 
     const journey = await Journey.findById(id);
-    if (!journey) return res.send(error(404, 'Journey not found'));
+    if (!journey) return res.status(404).send(error(404, 'Journey not found'));
     if (journey.owner.toString() !== curUserId)
-      return res.send(error(403, 'Only the owner can invite collaborators'));
+      return res.status(403).send(error(403, 'Only the owner can invite collaborators'));
     if (!journey.isActive)
-      return res.send(error(400, 'Cannot invite to a completed journey'));
+      return res.status(400).send(error(400, 'Cannot invite to a completed journey'));
     if (journey.collaborators.length >= journey.maxCollaborators)
-      return res.send(error(400, `Max collaborators limit (${journey.maxCollaborators}) reached`));
+      return res.status(400).send(error(400, `Max collaborators limit (${journey.maxCollaborators}) reached`));
     if (journey.collaborators.map((c) => c.toString()).includes(userId))
-      return res.send(error(409, 'User is already a collaborator'));
+      return res.status(409).send(error(409, 'User is already a collaborator'));
     if (journey.pendingInvites.map((p) => p.toString()).includes(userId))
-      return res.send(error(409, 'Invite already pending for this user'));
+      return res.status(409).send(error(409, 'Invite already pending for this user'));
 
     journey.pendingInvites.push(userId);
     await journey.save();
@@ -309,10 +284,11 @@ const inviteCollaborator = async (req, res) => {
     });
     notify(notif);
 
+    await invalidateSocialViews();
     return res.send(success(200, { message: 'Invite sent' }));
   } catch (err) {
     console.error('inviteCollaborator Error:', err);
-    return res.send(error(500, 'Something went wrong sending the invite'));
+    return res.status(500).send(error(500, 'Something went wrong sending the invite'));
   }
 };
 
@@ -324,7 +300,7 @@ const respondToInvite = async (req, res) => {
     const curUserId = req.user.user_Id;
 
     const journey = await Journey.findById(id);
-    if (!journey) return res.send(error(404, 'Journey not found'));
+    if (!journey) return res.status(404).send(error(404, 'Journey not found'));
 
     const isAlreadyCollab = journey.collaborators.map((c) => c.toString()).includes(curUserId);
     if (isAlreadyCollab) {
@@ -337,11 +313,12 @@ const respondToInvite = async (req, res) => {
         originalNotif.inviteStatus = 'accepted';
         await originalNotif.save();
       }
-      return res.send(success(200, { accepted: true }));
+      await invalidateSocialViews();
+    return res.send(success(200, { accepted: true }));
     }
 
     const isPending = journey.pendingInvites.map((p) => p.toString()).includes(curUserId);
-    if (!isPending) return res.send(error(403, 'No pending invite found for this user'));
+    if (!isPending) return res.status(403).send(error(403, 'No pending invite found for this user'));
 
     // Remove from pendingInvites regardless
     journey.pendingInvites.pull(curUserId);
@@ -382,10 +359,11 @@ const respondToInvite = async (req, res) => {
       console.log("No matching notification found!");
     }
 
+    await invalidateSocialViews();
     return res.send(success(200, { accepted: !!accept }));
   } catch (err) {
     console.error('respondToInvite Error:', err);
-    return res.send(error(500, 'Something went wrong responding to the invite'));
+    return res.status(500).send(error(500, 'Something went wrong responding to the invite'));
   }
 };
 
@@ -396,17 +374,18 @@ const removeCollaborator = async (req, res) => {
     const curUserId = req.user.user_Id;
 
     const journey = await Journey.findById(id);
-    if (!journey) return res.send(error(404, 'Journey not found'));
+    if (!journey) return res.status(404).send(error(404, 'Journey not found'));
     if (journey.owner.toString() !== curUserId)
-      return res.send(error(403, 'Only the owner can remove collaborators'));
+      return res.status(403).send(error(403, 'Only the owner can remove collaborators'));
 
     journey.collaborators.pull(userId);
     await journey.save();
 
+    await invalidateSocialViews();
     return res.send(success(200, { message: 'Collaborator removed' }));
   } catch (err) {
     console.error('removeCollaborator Error:', err);
-    return res.send(error(500, 'Something went wrong removing the collaborator'));
+    return res.status(500).send(error(500, 'Something went wrong removing the collaborator'));
   }
 };
 
@@ -422,7 +401,7 @@ const getCollaboratingJourneys = async (req, res) => {
     return res.send(success(200, { journeys }));
   } catch (err) {
     console.error('getCollaboratingJourneys Error:', err);
-    return res.send(error(500, 'Something went wrong fetching collaborating journeys'));
+    return res.status(500).send(error(500, 'Something went wrong fetching collaborating journeys'));
   }
 };
 
